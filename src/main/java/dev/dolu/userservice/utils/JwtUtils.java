@@ -1,12 +1,15 @@
 package dev.dolu.userservice.utils;
 
 import io.jsonwebtoken.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,12 +24,16 @@ public class JwtUtils {
     @Value("${jwt.expirationMs}")
     private long jwtExpirationMs;
 
-    /**
-     * Generates a JWT token for a given username.
-     *
-     * @param username The username for which the JWT is generated.
-     * @return A signed JWT token.
-     */
+    @Value("${jwt.refreshExpirationMs}")
+    private long refreshExpirationMs;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    public boolean isTokenBlacklisted(String token) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(token));
+    }
+
     public String generateJwtToken(String username) {
         Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
@@ -38,41 +45,62 @@ public class JwtUtils {
                 .compact();
     }
 
-    /**
-     * Extracts the username from a given JWT token.
-     *
-     * @param token The JWT token.
-     * @return The username embedded in the token.
-     */
-    public String getUsernameFromJwtToken(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(jwtSecret)
-                .parseClaimsJws(token)
-                .getBody();
-        return claims.getSubject();
+    public String generateRefreshToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
+                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
     }
 
-    /**
-     * Validates the JWT token.
-     *
-     * @param token The JWT token.
-     * @return True if the token is valid; otherwise, false.
-     */
     public boolean validateJwtToken(String token) {
         try {
             Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
             return true;
-        } catch (SignatureException e) {
-            logger.log(Level.SEVERE, "Invalid JWT signature: {0}", e.getMessage());
-        } catch (MalformedJwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             logger.log(Level.SEVERE, "Invalid JWT token: {0}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.log(Level.WARNING, "JWT token is expired: {0}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            logger.log(Level.SEVERE, "JWT token is unsupported: {0}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.log(Level.SEVERE, "JWT claims string is empty: {0}", e.getMessage());
         }
         return false;
     }
+
+    public String getUsernameFromJwtToken(String token) {
+        return Jwts.parser()
+                .setSigningKey(jwtSecret)
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    public void storeRefreshToken(String refreshToken, String username) {
+        redisTemplate.opsForValue().set("refresh_" + username, refreshToken, refreshExpirationMs, TimeUnit.MILLISECONDS);
+    }
+
+    public boolean isRefreshTokenValid(String username, String refreshToken) {
+        String storedToken = redisTemplate.opsForValue().get("refresh_" + username);
+        return storedToken != null && storedToken.equals(refreshToken);
+    }
+
+    public long getExpirationFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(jwtSecret)
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getExpiration().getTime() - System.currentTimeMillis();
+    }
+
+    public void blacklistToken(String token, long expiration, TimeUnit unit) {
+        redisTemplate.opsForValue().set(token, "blacklisted", expiration, unit);
+    }
+
+    public boolean validateRefreshToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            logger.log(Level.SEVERE, "Refresh token is invalid: {0}", e.getMessage());
+        }
+        return false;
+    }
+
 }

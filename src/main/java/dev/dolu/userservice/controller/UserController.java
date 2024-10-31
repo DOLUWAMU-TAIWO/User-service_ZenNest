@@ -2,6 +2,8 @@ package dev.dolu.userservice.controller;
 
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.service.UserService;
+import dev.dolu.userservice.utils.JwtUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,35 +13,38 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;
+    private final JwtUtils jwtUtils;
 
     // Constructor-based dependency injection for UserService
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtUtils jwtUtils) {
         this.userService = userService;
+        this.jwtUtils = jwtUtils;
+
+
+
+
     }
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody User loginRequest) {
-        // Call the login method from UserService
-        String token = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
+        Map<String, String> tokens = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
 
-        if (token != null) {
-            // Return token upon successful login
-            Map<String, String> response = new HashMap<>();
-            response.put("token", token);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+        if (tokens != null) {
+            return new ResponseEntity<>(tokens, HttpStatus.OK);
         } else {
-            // Return structured error message
             Map<String, String> error = new HashMap<>();
             error.put("error", "Invalid username or password");
             return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
         }
     }
+
 
 
     /**
@@ -59,7 +64,35 @@ public class UserController {
     }
 
     // Other CRUD endpoints for managing user data...
+    // New Logout Endpoint
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser(HttpServletRequest request) {
+        String jwt = request.getHeader("Authorization");
 
+        if (jwt != null && jwt.startsWith("Bearer ")) {
+            jwt = jwt.substring(7);  // Remove "Bearer " prefix
+            long expiration = jwtUtils.getExpirationFromToken(jwt);
+            jwtUtils.blacklistToken(jwt, expiration, TimeUnit.MILLISECONDS);
+            return new ResponseEntity<>("Logged out successfully", HttpStatus.OK);
+        }
+        return new ResponseEntity<>("Invalid token", HttpStatus.BAD_REQUEST);
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request, @RequestBody Map<String, String> refreshTokenRequest) {
+        String refreshToken = refreshTokenRequest.get("refreshToken");
+        String username = jwtUtils.getUsernameFromJwtToken(refreshToken);
+
+        if (username != null && jwtUtils.validateRefreshToken(refreshToken) && jwtUtils.isRefreshTokenValid(username, refreshToken)) {
+            String newAccessToken = jwtUtils.generateJwtToken(username);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("accessToken", newAccessToken);
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token.");
+        }
+    }
 
 
 

@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 public class UserService {
 
@@ -46,16 +49,31 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public String login(String username, String password) {
+    public Map<String, String> login(String username, String password) {
         // Fetch the user by username
         User user = userRepository.findByUsername(username);
+
+        // Validate user credentials
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            // If credentials match, generate a JWT token for the user
-            return jwtUtils.generateJwtToken(username);
+            // Generate both tokens
+            String accessToken = jwtUtils.generateJwtToken(username);
+            String refreshToken = jwtUtils.generateRefreshToken(username);
+
+            // Store the refresh token in Redis
+            jwtUtils.storeRefreshToken(refreshToken, username);
+
+            // Create a map to hold both tokens
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("accessToken", accessToken);
+            tokens.put("refreshToken", refreshToken);
+
+            return tokens;
         }
+
         // Return null or throw an exception if authentication fails
         return null;
     }
+
     // Other CRUD methods for managing user data...
     public User findUserById(Long userId) {
         return userRepository.findById(userId).orElse(null);

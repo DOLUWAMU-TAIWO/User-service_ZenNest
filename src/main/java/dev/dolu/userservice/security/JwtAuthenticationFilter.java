@@ -46,6 +46,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Extract JWT token from Authorization header
             String jwt = getJwtFromRequest(request);
 
+            // Check if JWT is blacklisted
+            if (jwt != null && jwtUtils.isTokenBlacklisted(jwt)) {
+                logger.log(Level.WARNING, "Attempt to use blacklisted token for request: {0}", request.getRequestURI());
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been invalidated.");
+                return;
+            }
+
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 // Get the username and verify it
                 String username = jwtUtils.getUsernameFromJwtToken(jwt);
@@ -71,6 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Proceed with the filter chain
         filterChain.doFilter(request, response);
     }
+
 
 
     // Helper method to extract JWT from the Authorization header
