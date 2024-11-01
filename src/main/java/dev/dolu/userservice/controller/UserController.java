@@ -1,8 +1,11 @@
 package dev.dolu.userservice.controller;
 
 import dev.dolu.userservice.models.User;
+import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.service.UserService;
+import dev.dolu.userservice.service.VerificationService;
 import dev.dolu.userservice.utils.JwtUtils;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,29 +24,37 @@ public class UserController {
 
     private final UserService userService;
     private final JwtUtils jwtUtils;
+    private final VerificationService verificationService;
+    private final UserRepository userRepository;
 
     // Constructor-based dependency injection for UserService
     @Autowired
-    public UserController(UserService userService, JwtUtils jwtUtils) {
+    public UserController(UserService userService, JwtUtils jwtUtils, VerificationService verificationService, UserRepository userRepository) {
         this.userService = userService;
         this.jwtUtils = jwtUtils;
+        this.userRepository= userRepository;
 
 
-
-
+        this.verificationService = verificationService;
     }
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody User loginRequest) {
-        Map<String, String> tokens = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
+        try {
+            Map<String, String> tokens = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
 
-        if (tokens != null) {
-            return new ResponseEntity<>(tokens, HttpStatus.OK);
-        } else {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Invalid username or password");
-            return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+            if (tokens != null) {
+                return new ResponseEntity<>(tokens, HttpStatus.OK);
+            } else {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Invalid username or password");
+                return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+            }
+        } catch (MessagingException e) {
+            // Log the error if needed
+            return new ResponseEntity<>("Failed to send verification email.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
 
@@ -119,4 +130,39 @@ public class UserController {
         // Returns the map of errors with HTTP 400 status, indicating a bad request due to validation failure
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
+
+
+
+
+
+
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyUser(@RequestParam("token") String token) {
+        boolean isVerified = verificationService.verifyToken(token);
+
+        if (isVerified) {
+            return ResponseEntity.ok("Account verified successfully!");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired verification token.");
+        }
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<String> resendVerification(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        User user = userRepository.findByEmail(email);
+
+        if (user != null && !user.isEnabled()) {
+            try {
+                verificationService.resendVerificationToken(user);
+                return ResponseEntity.ok("A new verification email has been sent to " + email);
+            } catch (MessagingException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to send verification email.");
+            }
+        }
+
+        return ResponseEntity.badRequest().body("User not found or already verified.");
+    }
+
 }
+

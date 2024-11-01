@@ -54,7 +54,16 @@ public class User {
         this.role = role;
         this.enabled = false;
     }
+    // Constructors, getters, and setters
 
+    // Getter and setter for 'enabled'
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
     // Getters and Setters
     public Long getId() {
         return id;
