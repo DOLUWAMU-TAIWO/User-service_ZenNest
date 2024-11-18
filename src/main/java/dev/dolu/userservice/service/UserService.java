@@ -4,6 +4,8 @@ import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.utils.JwtUtils;
 import jakarta.mail.MessagingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,18 +18,10 @@ import java.util.Map;
 @Service
 public class UserService {
 
-    // Password encoder for hashing user passwords before saving them
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+
     private final BCryptPasswordEncoder passwordEncoder;
-
-    // Repository to handle database operations for the User entity
     private final UserRepository userRepository;
-
-    /**
-     * Constructor-based dependency injection for UserRepository. and jwutils
-     * Initializes BCryptPasswordEncoder for secure password hashing.
-     *
-     * @param userRepository Injected UserRepository for interacting with the database
-     */
     private final JwtUtils jwtUtils;
     private final VerificationService verificationService;
 
@@ -40,61 +34,92 @@ public class UserService {
     }
 
     /**
-     * Registers a new user by hashing their password and saving the User entity.
+     * Registers a new user by validating inputs, hashing their password, and saving the User entity.
+     * If the email or username is already taken, throws a 409 Conflict error.
      *
-     * @param user User object containing registration details (username, email, raw password, etc.)
-     * @return The saved User object with the hashed password stored in the database
+     * @param user User object containing registration details.
+     * @return The saved User object with sensitive fields like the password hashed.
      */
     public User registerUser(User user) {
-        // Hash the user's password to ensure secure storage
+        // Validate that the username and email are not already in use
+        if (userRepository.existsByUsername(user.getUsername())) {
+            logger.warn("Registration failed: Username '{}' is already taken.", user.getUsername());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
+        }
+
+        if (userRepository.existsByEmail(user.getEmail())) {
+            logger.warn("Registration failed: Email '{}' is already in use.", user.getEmail());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+        }
+
+        // Hash the user's password for secure storage
         String hashedPassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(hashedPassword); // Set the hashed password on the user object
-        user.setEnabled(false); // Set the user to disabled until they verify their email
+        user.setPassword(hashedPassword);
+        user.setEnabled(false); // Disable user until email verification is complete
 
-        User savedUser = userRepository.save(user); // Save the user to the database
+        // Save the user to the database
+        User savedUser = userRepository.save(user);
 
+        // Send email verification token
         try {
             verificationService.createAndSendVerificationToken(savedUser);
+            logger.info("Verification token sent to '{}'.", user.getEmail());
         } catch (MessagingException e) {
-            e.printStackTrace(); // Log error and handle any further actions if needed
+            logger.error("Failed to send verification email to '{}'.", user.getEmail(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later.");
         }
 
         return savedUser;
     }
 
+    /**
+     * Authenticates a user by their username and password, and issues JWT tokens upon successful login.
+     * If the account is not verified, resends the verification token and returns a 403 Forbidden error.
+     *
+     * @param username The user's username.
+     * @param password The user's raw password.
+     * @return A map containing the access and refresh tokens.
+     * @throws MessagingException If an error occurs while resending the verification token.
+     */
     public Map<String, String> login(String username, String password) throws MessagingException {
         User user = userRepository.findByUsername(username);
 
+        // Validate username and password
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            // Check if the user's account is enabled
+            // Check if the user's account is verified
             if (!user.isEnabled()) {
-                // Resend the verification token since the user is not yet verified
+                logger.warn("Login attempt failed for unverified account '{}'. Resending verification token.", username);
                 verificationService.resendVerificationToken(user);
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account not verified. A new verification email has been sent.");
             }
 
-            // User is enabled, proceed with login
+            // Generate JWT tokens
             String accessToken = jwtUtils.generateJwtToken(username);
             String refreshToken = jwtUtils.generateRefreshToken(username);
 
+            // Store the refresh token securely (if applicable)
             jwtUtils.storeRefreshToken(refreshToken, username);
 
+            // Return tokens
             Map<String, String> tokens = new HashMap<>();
             tokens.put("accessToken", accessToken);
             tokens.put("refreshToken", refreshToken);
 
+            logger.info("User '{}' successfully logged in.", username);
             return tokens;
         }
 
+        logger.warn("Login attempt failed for username '{}': Invalid credentials.", username);
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
-
     }
 
-
-    // Other CRUD methods for managing user data...
+    /**
+     * Finds a user by their ID.
+     *
+     * @param userId The user's ID.
+     * @return The User object if found, or null if not found.
+     */
     public User findUserById(Long userId) {
         return userRepository.findById(userId).orElse(null);
     }
-
-
 }

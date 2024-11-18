@@ -32,7 +32,7 @@ public class SecurityConfig {
     // Main security configuration, now using JWT authentication
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+                http
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for simplicity; enable for production
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Set to stateless for JWT usage
