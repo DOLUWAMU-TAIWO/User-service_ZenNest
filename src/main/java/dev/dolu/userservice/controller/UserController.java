@@ -1,5 +1,6 @@
 package dev.dolu.userservice.controller;
 
+import dev.dolu.userservice.models.LoginRequest;
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.service.UserService;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,22 +40,33 @@ public class UserController {
         this.verificationService = verificationService;
     }
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@Valid @RequestBody User loginRequest) {
+    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
+            // Log the login attempt
+            System.out.println("Login attempt for user: " + loginRequest.getUsername());
+
+            // Authenticate the user and generate tokens
             Map<String, String> tokens = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
 
-            if (tokens != null) {
-                return new ResponseEntity<>(tokens, HttpStatus.OK);
-            } else {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Invalid username or password");
-                return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
-            }
-        } catch (MessagingException e) {
-            // Log the error if needed
-            return new ResponseEntity<>("Failed to send verification email.", HttpStatus.INTERNAL_SERVER_ERROR);
+            // Return the tokens if authentication succeeds
+            return new ResponseEntity<>(tokens, HttpStatus.OK);
+
+        } catch (ResponseStatusException e) {
+            // Handle custom exceptions from the service layer
+            return ResponseEntity
+                    .status(e.getStatusCode())
+                    .body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            // Catch any unexpected exceptions
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An unexpected error occurred."));
         }
     }
+
+
+
+
 
 
 
@@ -163,6 +176,24 @@ public class UserController {
 
         return ResponseEntity.badRequest().body("User not found or already verified.");
     }
+
+    @GetMapping("/user-details")
+    public ResponseEntity<?> getUserDetails(HttpServletRequest request) {
+        String jwt = request.getHeader("Authorization").substring(7);
+        String username = jwtUtils.getUsernameFromJwtToken(jwt);
+
+        User user = userRepository.findByUsername(username);
+        if (user != null) {
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("username", user.getUsername());
+            userInfo.put("email", user.getEmail());
+            userInfo.put("role", user.getRole());
+            return ResponseEntity.ok(userInfo);
+        }
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+    }
+
 
 }
 

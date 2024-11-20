@@ -82,36 +82,37 @@ public class UserService {
      * @throws MessagingException If an error occurs while resending the verification token.
      */
     public Map<String, String> login(String username, String password) throws MessagingException {
+        // Retrieve user from database
         User user = userRepository.findByUsername(username);
 
-        // Validate username and password
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            // Check if the user's account is verified
+            // If user exists and password matches
+
+            // Check if user is enabled (verified)
             if (!user.isEnabled()) {
-                logger.warn("Login attempt failed for unverified account '{}'. Resending verification token.", username);
+                // If not verified, resend verification token and return an error
                 verificationService.resendVerificationToken(user);
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account not verified. A new verification email has been sent.");
             }
 
-            // Generate JWT tokens
+            // Generate access and refresh tokens
             String accessToken = jwtUtils.generateJwtToken(username);
             String refreshToken = jwtUtils.generateRefreshToken(username);
 
-            // Store the refresh token securely (if applicable)
+            // Store refresh token securely (Redis-backed storage)
             jwtUtils.storeRefreshToken(refreshToken, username);
 
-            // Return tokens
+            // Return the tokens
             Map<String, String> tokens = new HashMap<>();
             tokens.put("accessToken", accessToken);
             tokens.put("refreshToken", refreshToken);
-
-            logger.info("User '{}' successfully logged in.", username);
             return tokens;
         }
 
-        logger.warn("Login attempt failed for username '{}': Invalid credentials.", username);
+        // Invalid credentials
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
     }
+
 
     /**
      * Finds a user by their ID.

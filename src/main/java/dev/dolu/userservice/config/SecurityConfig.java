@@ -38,11 +38,20 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Set to stateless for JWT usage
                 )
                 .authorizeRequests(authorize -> authorize
-                        .requestMatchers("/error").permitAll() // Allow access to the default error page
-                        .requestMatchers("/api/users/register", "http://localhost:3000", "/api/users/verify","/api/users/refresh-token", "/api/test-email","/api/users/login").permitAll() // Allow access to register and login endpoints
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Only ADMIN role can access /admin paths
-                        .anyRequest().authenticated() // All other requests require authentication
-                )
+                .requestMatchers(
+                        "/error",
+                        "/api/users/register",
+                        "/api/users/login",
+                        "/api/users/logout",
+                        "/api/users/verify",
+                        "/api/users/user-details",
+                        "/api/users/refresh-token",
+                        "/api/test-email"
+                ).permitAll() // Publicly accessible endpoints
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // Restricted to ADMIN role
+                .anyRequest().authenticated() // Other requests require authentication
+        )
+
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class); // Add JWT filter
 
         return http.build();
