@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @RestController
@@ -193,6 +195,32 @@ public class UserController {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        Optional<User> user = userRepository.findById(id);
+        if (user.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
+        }
+
+        // Return only the necessary user details
+        User userDetails = user.get();
+        Map<String, Object> response = Map.of(
+                "id", userDetails.getId(),
+                "username", userDetails.getUsername(),
+                "email", userDetails.getEmail()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping("/batch")
+    public ResponseEntity<?> getUsersByIds(@RequestBody List<Long> userIds) {
+        List<User> users = userRepository.findAllById(userIds);
+        return ResponseEntity.ok(users);
+    }
+
 
 
 }

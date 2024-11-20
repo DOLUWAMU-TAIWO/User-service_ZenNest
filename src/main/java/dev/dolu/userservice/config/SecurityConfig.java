@@ -41,7 +41,9 @@ public class SecurityConfig {
                 .requestMatchers(
                         "/error",
                         "/api/users/register",
+                        "/api/users/{id}",
                         "/api/users/login",
+                        "/api/users/batch",
                         "/api/users/logout",
                         "/api/users/verify",
                         "/api/users/user-details",
