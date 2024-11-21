@@ -4,14 +4,18 @@ import dev.dolu.userservice.models.LoginRequest;
 import dev.dolu.userservice.models.Role;
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.repository.UserRepository;
+import dev.dolu.userservice.repository.VerificationTokenRepository;
+import dev.dolu.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -36,21 +40,38 @@ class LoginEndpointTest {
     private UserRepository userRepository;
 
     @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @MockBean
+    private JavaMailSender mailSender;
+
+    @Autowired
     private TestRestTemplate restTemplate;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+    @Autowired
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll(); // Clear the users table
+        // Clear the verification_token table
+        verificationTokenRepository.deleteAll();
+        verificationTokenRepository.flush();
+
+        // Clear the users table
+        userRepository.deleteAll();
         userRepository.flush();
+
+        // Reset the TestRestTemplate
         restTemplate = restTemplate.withBasicAuth(null, null);
-        System.out.println("User count after setup: " + userRepository.count());
-        // Ensure changes are persisted
         restTemplate.getRestTemplate().getInterceptors().clear();
 
+        System.out.println("User count after setup: " + userRepository.count());
     }
+
+
+
 
 
 
