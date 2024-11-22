@@ -72,8 +72,8 @@ jobs:
               -e SPRING_DATASOURCE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
               -e SPRING_REDIS_HOST=${{ secrets.REDIS_HOST }} \
               -e SPRING_REDIS_PORT=6379 \
-              -e JWT_SECRET="x9:ROu<tANZ,Q0k7c9Px" \
-              -e JWT_EXPIRATION_MS="604800000" \
-              -e JWT_REFRESH_EXPIRATION_MS="2592000000" \
+              -e JWT_SECRET="$JWT_SECRET" \
+              -e JWT_EXPIRATION_MS="$JWT_EXPIRATION_MS" \
+              -e JWT_REFRESH_EXPIRATION_MS="$JWT_REFRESH_EXPIRATION_MS" \
               ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           EOF
