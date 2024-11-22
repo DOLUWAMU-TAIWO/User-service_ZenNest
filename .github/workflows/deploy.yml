@@ -44,27 +44,31 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
+      # Deploy to AWS EC2
       - name: Deploy to AWS EC2
         run: |
-          # Use the private key directly from GitHub secrets
+          # Save the private key from GitHub Secrets
           echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
 
           # SSH into EC2 instance
-          ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
-            # Set the environment variables on the EC2 instance
+          ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            # Export environment variables
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export JWT_EXPIRATION_MS="${{ secrets.JWT_EXPIRATION_MS }}"
             export JWT_REFRESH_EXPIRATION_MS="${{ secrets.JWT_REFRESH_EXPIRATION_MS }}"
 
-            # Check if a container with the name "user-service" is already running, and remove it if it exists
+            # Stop and remove existing Docker container if running
             if [ \$(docker ps -aq -f name=user-service) ]; then
-              echo "Removing existing user-service container..."
+              echo "Stopping and removing existing container..."
               docker stop user-service
               docker rm user-service
             fi
 
-            # Run the Docker container with JWT_SECRET, JWT_EXPIRATION_MS, and JWT_REFRESH_EXPIRATION_MS passed as environment variables
+            # Pull the latest Docker image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+
+            # Run the Docker container
             echo "Deploying the new user-service container..."
             docker run -d --name user-service -p 8080:8080 \
               -e SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.POSTGRES_HOST }}:5432/user_service \
