@@ -46,7 +46,9 @@ jobs:
       # Deploy to AWS EC2
       - name: Deploy to AWS EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i <(echo ${{ secrets.EC2_KEY }} | base64 -d) ec2-user@${{ secrets.EC2_HOST }} << EOF
+          echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
+          chmod 400 ~/decoded-key.pem
+          ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
             docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
             docker stop user-service || true
             docker rm user-service || true
