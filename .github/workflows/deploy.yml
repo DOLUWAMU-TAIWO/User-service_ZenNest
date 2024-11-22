@@ -50,8 +50,13 @@ jobs:
           echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
 
-          # SSH into EC2 instance and deploy the Docker container
+          # SSH into EC2 instance
           ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
+            # Set the environment variables on the EC2 instance
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export JWT_EXPIRATION_MS="${{ secrets.JWT_EXPIRATION_MS }}"
+            export JWT_REFRESH_EXPIRATION_MS="${{ secrets.JWT_REFRESH_EXPIRATION_MS }}"
+
             # Check if a container with the name "user-service" is already running, and remove it if it exists
             if [ \$(docker ps -aq -f name=user-service) ]; then
               echo "Removing existing user-service container..."
@@ -59,7 +64,7 @@ jobs:
               docker rm user-service
             fi
 
-            # Run the Docker container with JWT_SECRET and JWT_EXPIRATION_MS passed as GitHub secrets
+            # Run the Docker container with JWT_SECRET, JWT_EXPIRATION_MS, and JWT_REFRESH_EXPIRATION_MS passed as environment variables
             echo "Deploying the new user-service container..."
             docker run -d --name user-service -p 8080:8080 \
               -e SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.POSTGRES_HOST }}:5432/user_service \
@@ -69,5 +74,6 @@ jobs:
               -e SPRING_REDIS_PORT=6379 \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               -e JWT_EXPIRATION_MS="${{ secrets.JWT_EXPIRATION_MS }}" \
+              -e JWT_REFRESH_EXPIRATION_MS="${{ secrets.JWT_REFRESH_EXPIRATION_MS }}" \
               ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           EOF
