@@ -1,9 +1,7 @@
 name: CI/CD Pipeline
 
 on:
-  workflow_dispatch:
-    branches:
-      - main
+  workflow_dispatch:  # Allows manual triggering of the pipeline
 
 jobs:
   build-and-deploy:
@@ -48,7 +46,7 @@ jobs:
         run: |
           # Debug: Check the secrets in the workflow log
           echo "Checking secret permissions and formatting..."
-          
+
           # Save the private key to a file
           echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
