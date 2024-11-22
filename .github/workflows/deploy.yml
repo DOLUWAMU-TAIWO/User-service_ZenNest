@@ -1,7 +1,10 @@
 name: CI/CD Pipeline
 
 on:
-  workflow_dispatch:  # Allows manual triggering of the pipeline
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Enables manual triggering from GitHub
 
 jobs:
   build-and-deploy:
@@ -41,25 +44,24 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
-      #
-      #      # Deploy to AWS EC2
-      #      - name: Deploy to AWS EC2
-      #        run: |
-      #          # Use the private key directly from GitHub secrets
-      #          echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
-      #          chmod 400 ~/decoded-key.pem
-      #
-      #          # SSH into EC2 instance and deploy the Docker container
-      #          ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
-      #            docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-      #            docker stop user-service || true
-      #            docker rm user-service || true
-      #            docker run -d --name user-service -p 8080:8080 \
-      #              -e SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.POSTGRES_HOST }}:5432/user_service \
-      #              -e SPRING_DATASOURCE_USERNAME=${{ secrets.POSTGRES_USERNAME }} \
-      #              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-      #              -e SPRING_REDIS_HOST=${{ secrets.REDIS_HOST }} \
-      #              -e SPRING_REDIS_PORT=6379 \
-      #              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-      #              ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-      #          EOF
+      # Deploy to AWS EC2
+      - name: Deploy to AWS EC2
+        run: |
+          # Use the private key directly from GitHub secrets
+          echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
+          chmod 400 ~/decoded-key.pem
+
+          # SSH into EC2 instance and deploy the Docker container
+          ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
+            docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+            docker stop user-service || true
+            docker rm user-service || true
+            docker run -d --name user-service -p 8080:8080 \
+              -e SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.POSTGRES_HOST }}:5432/user_service \
+              -e SPRING_DATASOURCE_USERNAME=${{ secrets.POSTGRES_USERNAME }} \
+              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+              -e SPRING_REDIS_HOST=${{ secrets.REDIS_HOST }} \
+              -e SPRING_REDIS_PORT=6379 \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          EOF
