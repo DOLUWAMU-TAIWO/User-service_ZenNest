@@ -46,8 +46,18 @@ jobs:
       # Deploy to AWS EC2
       - name: Deploy to AWS EC2
         run: |
+          # Debug: Check the secrets in the workflow log
+          echo "Checking secret permissions and formatting..."
+          
+          # Save the private key to a file
           echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
+
+          # Debug: Check if the key is correct by listing the file contents
+          ls -l ~/decoded-key.pem
+          cat ~/decoded-key.pem
+
+          # Use the private key to SSH into EC2
           ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
             docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
             docker stop user-service || true
