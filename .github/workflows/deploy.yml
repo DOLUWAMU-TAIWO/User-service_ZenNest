@@ -63,5 +63,6 @@ jobs:
               -e SPRING_REDIS_HOST=${{ secrets.REDIS_HOST }} \
               -e SPRING_REDIS_PORT=6379 \
               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e JWT_EXPIRATION_MS=3600000 \ 
               ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           EOF
