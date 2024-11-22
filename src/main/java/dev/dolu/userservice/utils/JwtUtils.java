@@ -18,10 +18,10 @@ public class JwtUtils {
 
     private static final Logger logger = Logger.getLogger(JwtUtils.class.getName());
 
-    @Value("${JWT_SECRET}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${JWT_EXPIRATION_MS}")
+    @Value("${jwt.expiration.Ms}")
     private long jwtExpirationMs;
 
     @Value("${jwt.refreshExpirationMs}")
