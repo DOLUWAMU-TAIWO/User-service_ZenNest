@@ -44,7 +44,6 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
-      # Deploy to AWS EC2
       - name: Deploy to AWS EC2
         run: |
           # Use the private key directly from GitHub secrets
@@ -62,7 +61,7 @@ jobs:
               -e SPRING_DATASOURCE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
               -e SPRING_REDIS_HOST=${{ secrets.REDIS_HOST }} \
               -e SPRING_REDIS_PORT=6379 \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e JWT_EXPIRATION_MS=3600000 \ 
+              -e JWT_KEY=${{ secrets.JWT_KEY }} \
+              -e JWT_EXPIRATION_MS=${{ secrets.JWT_EXPIRATION_MS }} \
               ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           EOF
