@@ -48,19 +48,24 @@ jobs:
       - name: Deploy to AWS EC2
         run: |
           # Save the private key from GitHub Secrets
-          echo "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
+          printf "%s" "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
 
           # SSH into EC2 instance
           ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            # Export environment variables
-            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            export JWT_EXPIRATION_MS="${{ secrets.JWT_EXPIRATION_MS }}"
-            export JWT_REFRESH_EXPIRATION_MS="${{ secrets.JWT_REFRESH_EXPIRATION_MS }}"
+            # Set environment variables
+            SPRING_PROFILES_ACTIVE=prod
+            SPRING_DATASOURCE_URL="${{ secrets.SPRING_DATASOURCE_URL }}"
+            SPRING_DATASOURCE_USERNAME="${{ secrets.POSTGRES_USERNAME }}"
+            SPRING_DATASOURCE_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            SPRING_REDIS_HOST="${{ secrets.REDIS_HOST }}"
+            SPRING_REDIS_PORT=6379
+            JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            JWT_EXPIRATION_MS="${{ secrets.JWT_EXPIRATION_MS }}"
+            JWT_REFRESH_EXPIRATION_MS="${{ secrets.JWT_REFRESH_EXPIRATION_MS }}"
 
             # Stop and remove existing Docker container if running
             if [ "$(docker ps -aq -f name=user-service)" ]; then
-              echo "Stopping and removing existing container..."
               docker stop user-service
               docker rm user-service
             fi
@@ -69,14 +74,13 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
             # Run the Docker container
-            echo "Deploying the new user-service container..."
             docker run -d --name user-service -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
-              -e SPRING_DATASOURCE_USERNAME=${{ secrets.POSTGRES_USERNAME }} \
-              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-              -e SPRING_REDIS_HOST=${{ secrets.REDIS_HOST }} \
-              -e SPRING_REDIS_PORT=6379 \
+              -e SPRING_PROFILES_ACTIVE="$SPRING_PROFILES_ACTIVE" \
+              -e SPRING_DATASOURCE_URL="$SPRING_DATASOURCE_URL" \
+              -e SPRING_DATASOURCE_USERNAME="$SPRING_DATASOURCE_USERNAME" \
+              -e SPRING_DATASOURCE_PASSWORD="$SPRING_DATASOURCE_PASSWORD" \
+              -e SPRING_REDIS_HOST="$SPRING_REDIS_HOST" \
+              -e SPRING_REDIS_PORT="$SPRING_REDIS_PORT" \
               -e JWT_SECRET="$JWT_SECRET" \
               -e JWT_EXPIRATION_MS="$JWT_EXPIRATION_MS" \
               -e JWT_REFRESH_EXPIRATION_MS="$JWT_REFRESH_EXPIRATION_MS" \
