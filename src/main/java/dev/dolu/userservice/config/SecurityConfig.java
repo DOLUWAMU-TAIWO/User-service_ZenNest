@@ -46,9 +46,12 @@ public class SecurityConfig {
                         "/api/users/batch",
                         "/api/users/logout",
                         "/api/users/verify",
+                        "/",
+                        "/health",
                         "/api/users/user-details",
                         "/api/users/refresh-token",
                         "/api/test-email"
+
                 ).permitAll() // Publicly accessible endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // Restricted to ADMIN role
                 .anyRequest().authenticated() // Other requests require authentication
