@@ -35,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String requestPath = request.getRequestURI();
+                //paths that require auth
 
         if (requestPath.equals("/api/users/login") ||
                 requestPath.equals("/api/users/register") ||
