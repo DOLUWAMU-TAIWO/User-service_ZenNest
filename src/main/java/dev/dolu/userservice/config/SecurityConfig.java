@@ -47,13 +47,18 @@ public class SecurityConfig {
                         "/api/users/logout",
                         "/api/users/verify",
                         "/",
+                        "/api/users/all",
+                        "/api/users/search",
+                        "/api/users/verify-email",
+                        "/api/users/forgot-password",
+                        "/api/users/reset-password",
+                        "/api/users/resend-verification",
                         "/health",
-                        "/api/users/user-details",
                         "/api/users/refresh-token",
                         "/api/test-email"
 
                 ).permitAll() // Publicly accessible endpoints
-                .requestMatchers("/api/admin/**").hasRole("ADMIN") // Restricted to ADMIN role
+               .requestMatchers("/api/admin/**").hasRole("ADMIN") // Restricted to ADMIN role
                 .anyRequest().authenticated() // Other requests require authentication
         )
 

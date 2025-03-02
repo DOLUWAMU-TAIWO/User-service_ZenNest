@@ -2,6 +2,7 @@ package dev.dolu.userservice.controller;
 
 import dev.dolu.userservice.models.LoginRequest;
 import dev.dolu.userservice.models.User;
+import dev.dolu.userservice.models.UserDTO;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.service.UserService;
 import dev.dolu.userservice.service.VerificationService;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -214,12 +216,53 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/validate-username")
+    public ResponseEntity<?> validateUsername(@RequestParam String username) {
+        Optional<User> user = Optional.ofNullable(userRepository.findByUsername(username));
+        if (user.isPresent()) {
+            return ResponseEntity.ok("User is valid");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+    }
+
+
+
+    @GetMapping("/all")
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        List<UserDTO> users = userRepository.findAll().stream()
+                .map(UserDTO::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<UserDTO>> searchUsers(@RequestParam("query") String query) {
+        List<UserDTO> users = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query)
+                .stream()
+                .map(UserDTO::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
+    }
+
+
 
     @PostMapping("/batch")
     public ResponseEntity<?> getUsersByIds(@RequestBody List<Long> userIds) {
         List<User> users = userRepository.findAllById(userIds);
         return ResponseEntity.ok(users);
     }
+
+    @GetMapping("/get-user")
+    public ResponseEntity<?> getUserByUsername(@RequestParam String username) {
+        Optional<User> user = Optional.ofNullable(userRepository.findByUsername(username));
+        if (user.isPresent()) {
+            return ResponseEntity.ok(user.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+    }
+
 
 
 

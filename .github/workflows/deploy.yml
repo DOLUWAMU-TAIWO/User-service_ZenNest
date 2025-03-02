@@ -1,18 +1,18 @@
-name: CI/CD Pipeline
+name: Deploy MessagingService to EC2
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Enables manual triggering from GitHub
+  workflow_dispatch: # Allows manual triggering from GitHub UI
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout code
+      # Step 1: Checkout the repo
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       # Step 2: Set up Java environment
@@ -22,11 +22,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Step 3: Build the application (for Maven-based projects)
+      # Step 3: Build the application (Skipping tests)
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      # Step 4: Set up Docker
+      # Step 4: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -38,51 +38,37 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # Step 6: Build and push Docker image
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/messaging-service .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/messaging-service:latest ${{ secrets.DOCKER_USERNAME }}/messaging-service:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/messaging-service:latest
 
-      # Step 7: Deploy to AWS EC2
-      - name: Deploy to AWS EC2
+      # Step 7: Decode and set up SSH Key
+      - name: Decode SSH Key
         run: |
-          # Save the private key from GitHub Secrets
-          printf "%s" "${{ secrets.EC2_KEY }}" > ~/decoded-key.pem
+          echo "${{ secrets.EC2_KEY }}" | base64 --decode > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
 
-          # SSH into EC2 instance
+      # Step 8: SSH into EC2 and Deploy using Docker Compose
+      - name: SSH into EC2 and Deploy
+        run: |
           ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            # Set environment variables
-            SPRING_PROFILES_ACTIVE=prod
-            SPRING_DATASOURCE_URL="${{ secrets.SPRING_DATASOURCE_URL }}"
-            SPRING_DATASOURCE_USERNAME="${{ secrets.POSTGRES_USERNAME }}"
-            SPRING_DATASOURCE_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
-            SPRING_REDIS_HOST="${{ secrets.REDIS_HOST }}"
-            SPRING_REDIS_PORT=6379
-            JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            JWT_EXPIRATION_MS="${{ secrets.JWT_EXPIRATION_MS }}"
-            JWT_REFRESH_EXPIRATION_MS="${{ secrets.JWT_REFRESH_EXPIRATION_MS }}"
+            set -e  # Exit on error
 
-            # Stop and remove existing Docker container if running
-            if [ "$(docker ps -aq -f name=user-service)" ]; then
-              docker stop user-service
-              docker rm user-service
-            fi
+            # Go to the MessagingService directory
+            cd ~/MessagingService
 
-            # Pull the latest Docker image
-            docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+            # Stop and remove all running services
+            docker compose down || true
 
-            # Run the Docker container
-            docker run -d --name user-service -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE="$SPRING_PROFILES_ACTIVE" \
-              -e SPRING_DATASOURCE_URL="$SPRING_DATASOURCE_URL" \
-              -e SPRING_DATASOURCE_USERNAME="$SPRING_DATASOURCE_USERNAME" \
-              -e SPRING_DATASOURCE_PASSWORD="$SPRING_DATASOURCE_PASSWORD" \
-              -e SPRING_REDIS_HOST="$SPRING_REDIS_HOST" \
-              -e SPRING_REDIS_PORT="$SPRING_REDIS_PORT" \
-              -e JWT_SECRET="$JWT_SECRET" \
-              -e JWT_EXPIRATION_MS="$JWT_EXPIRATION_MS" \
-              -e JWT_REFRESH_EXPIRATION_MS="$JWT_REFRESH_EXPIRATION_MS" \
-              ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+            # Pull the latest image from Docker Hub
+            docker pull ${{ secrets.DOCKER_USERNAME }}/messaging-service:latest
+
+            # Ensure .env is correctly set up
+            echo "SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" > .env
+            echo "SERVICE_PASSWORD=${{ secrets.SERVICE_PASSWORD }}" >> .env
+
+            # Deploy using Docker Compose
+            docker compose up -d --remove-orphans
           EOF
