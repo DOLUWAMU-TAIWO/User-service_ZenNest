@@ -64,6 +64,8 @@ jobs:
 
             # Pull the latest UserService image from Docker Hub
             docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          
+            mvn clean package -DskipTests
 
             # Ensure .env file is correctly set up
             echo "SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}" > .env
@@ -75,7 +77,8 @@ jobs:
             echo "JWT_EXPIRATION_MS=${{ secrets.JWT_EXPIRATION_MS }}" >> .env
             echo "JWT_REFRESH_EXPIRATION_MS=${{ secrets.JWT_REFRESH_EXPIRATION_MS }}" >> .env
           
-            echo"Environment variables set up successfully"
+            echo "✅ Environment variables set up successfully"
+
 
             # Start all services using Docker Compose
             docker compose up -d --remove-orphans

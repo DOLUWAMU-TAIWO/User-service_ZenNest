@@ -14,6 +14,8 @@ services:
       SPRING_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
       jwt.expirationMs: "604800000"
+    env_file:
+      - .env
     depends_on:
       - postgres
       - redis
