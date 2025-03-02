@@ -74,6 +74,8 @@ jobs:
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
             echo "JWT_EXPIRATION_MS=${{ secrets.JWT_EXPIRATION_MS }}" >> .env
             echo "JWT_REFRESH_EXPIRATION_MS=${{ secrets.JWT_REFRESH_EXPIRATION_MS }}" >> .env
+          
+            echo"Environment variables set up successfully"
 
             # Start all services using Docker Compose
             docker compose up -d --remove-orphans
