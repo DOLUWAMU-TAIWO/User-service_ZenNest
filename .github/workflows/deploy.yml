@@ -41,7 +41,6 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
       # Step 7: Decode and set up SSH Key
@@ -57,7 +56,7 @@ jobs:
             set -e  # Exit on error
           
             # Navigate to the correct directory
-            cd ~/User-Service  # <-- FIXED DIRECTORY NAME
+            cd ~/user-service  # Ensure we are inside the right project folder
           
             # Ensure the old containers are stopped
             docker compose down || true
@@ -68,28 +67,10 @@ jobs:
             # Pull the latest UserService image from Docker Hub
             docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           
-            # Ensure .env file is correctly set up
-            echo "SPRING_PROFILES_ACTIVE=prod" > .env
-            echo "SERVER_PORT=8085" >> .env
+            # ✅ No need to recreate .env (already exists on EC2)
           
-            echo "SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/user_service" >> .env
-            echo "SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}" >> .env
-            echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}" >> .env
-
-            echo "SPRING_DATA_REDIS_HOST=redis" >> .env
-            echo "SPRING_DATA_REDIS_PORT=6379" >> .env
-          
-            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-            echo "JWT_EXPIRATION_MS=${{ secrets.JWT_EXPIRATION_MS }}" >> .env
-            echo "JWT_REFRESH_EXPIRATION_MS=${{ secrets.JWT_REFRESH_EXPIRATION_MS }}" >> .env
-          
-            echo "EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }}" >> .env
-            echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
-            echo "EMAIL_SERVICE_URL=http://51.20.82.221:8080/api/email/send" >> .env
-            echo "API_KEY=${{ secrets.API_KEY }}" >> .env
-          
-            echo "✅ Environment variables set up successfully"
-
             # Start all services using Docker Compose
             docker compose up -d --remove-orphans
+          
+            echo "🚀 Deployment Complete!"
           EOF
