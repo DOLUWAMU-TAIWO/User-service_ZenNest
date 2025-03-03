@@ -50,7 +50,7 @@ jobs:
           echo "${{ secrets.EC2_KEY }}" | base64 --decode > ~/decoded-key.pem
           chmod 400 ~/decoded-key.pem
 
-      # Step 8: SSH into EC2 and Deploy
+       # Step 8: SSH into EC2 and Deploy
       - name: SSH into EC2 and Deploy
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
@@ -58,22 +58,9 @@ jobs:
             
             echo "🚀 [INFO] SSH connection established"
 
-            # Navigate to the correct directory
-            cd ~/user-service || { echo "❌ [ERROR] user-service directory not found"; exit 1; }
+            # Test if we are inside EC2 by creating a file
+            echo "This is a test file from GitHub Actions" > ~/user-service/test_file.txt
 
-            echo "🔄 [INFO] Stopping existing containers"
-            docker compose down || true
-
-            echo "🗑️ [INFO] Removing old images"
-            docker rmi -f ${{ secrets.DOCKER_USERNAME }}/user-service:latest || true
-
-            echo "📦 [INFO] Pulling latest Docker image"
-            docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-
-            echo "🚀 [INFO] Starting services using Docker Compose"
-            docker compose up -d --remove-orphans || { echo "❌ [ERROR] Docker Compose failed"; exit 1; }
-
-            echo "🔍 [INFO] Verifying running containers"
-            docker ps -a
-            docker logs user-service || echo "⚠️ [WARNING] No logs found for user-service"
+            # Confirm the file was created
+            ls -l ~/user-service/test_file.txt || echo "❌ [ERROR] Test file was NOT created"
           EOF
