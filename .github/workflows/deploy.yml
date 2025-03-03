@@ -41,6 +41,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
       # Step 7: Decode and set up SSH Key
@@ -54,23 +55,25 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/decoded-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             set -e  # Exit on error
-          
+            
+            echo "🚀 [INFO] SSH connection established"
+
             # Navigate to the correct directory
-            cd ~/user-service  # Ensure we are inside the right project folder
-          
-            # Ensure the old containers are stopped
+            cd ~/user-service || { echo "❌ [ERROR] user-service directory not found"; exit 1; }
+
+            echo "🔄 [INFO] Stopping existing containers"
             docker compose down || true
-          
-            # Remove the old image to force a fresh pull
+
+            echo "🗑️ [INFO] Removing old images"
             docker rmi -f ${{ secrets.DOCKER_USERNAME }}/user-service:latest || true
-          
-            # Pull the latest UserService image from Docker Hub
+
+            echo "📦 [INFO] Pulling latest Docker image"
             docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-          
-            # ✅ No need to recreate .env (already exists on EC2)
-          
-            # Start all services using Docker Compose
-            docker compose up -d --remove-orphans
-          
-            echo "🚀 Deployment Complete!"
+
+            echo "🚀 [INFO] Starting services using Docker Compose"
+            docker compose up -d --remove-orphans || { echo "❌ [ERROR] Docker Compose failed"; exit 1; }
+
+            echo "🔍 [INFO] Verifying running containers"
+            docker ps -a
+            docker logs user-service || echo "⚠️ [WARNING] No logs found for user-service"
           EOF
