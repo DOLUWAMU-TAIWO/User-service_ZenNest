@@ -84,11 +84,14 @@ public class UserController {
      * @return ResponseEntity with the saved User and HTTP status 201 (Created) if successful.
      */
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
-        // Calls the service layer to save the user after hashing the password.
-        User savedUser = userService.registerUser(user);
-        // Returns the saved User object with HTTP 201 status (Created).
-        return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
+    public ResponseEntity<Map<String, Object>> registerUser(@Valid @RequestBody User user) {
+        Map<String, Object> response = userService.registerUser(user);
+
+        if (response.containsKey("emailStatus")) {
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED); // 202 Accepted (Partial Success)
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created (Full Success)
     }
 
     // Other CRUD endpoints for managing user data...

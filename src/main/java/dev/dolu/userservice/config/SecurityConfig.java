@@ -54,6 +54,7 @@ public class SecurityConfig {
                         "/api/users/reset-password",
                         "/api/users/resend-verification",
                         "/health",
+                        "/actuator/**",
                         "/api/users/refresh-token",
                         "/api/test-email"
 

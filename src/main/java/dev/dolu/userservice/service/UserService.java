@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -40,8 +41,9 @@ public class UserService {
      * @param user User object containing registration details.
      * @return The saved User object with sensitive fields like the password hashed.
      */
-    public User registerUser(User user) {
-        // Validate that the username and email are not already in use
+    public Map<String, Object> registerUser(User user) {
+        Map<String, Object> response = new HashMap<>();
+
         if (userRepository.existsByUsername(user.getUsername())) {
             logger.warn("Registration failed: Username '{}' is already taken.", user.getUsername());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
@@ -52,26 +54,22 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
         }
 
-        // Hash the user's password for secure storage
-        String hashedPassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(hashedPassword);
-        user.setEnabled(false); // Disable user until email verification is complete
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setEnabled(false);
 
-        // Save the user to the database
         User savedUser = userRepository.save(user);
+        response.put("user", savedUser);
+        response.put("message", "User registered successfully. Please verify your email.");
 
-        // Send email verification token
-        try {
-            verificationService.createAndSendVerificationToken(savedUser);
-            logger.info("Verification token sent to '{}'.", user.getEmail());
-        } catch (MessagingException e) {
-            logger.error("Failed to send verification email to '{}'.", user.getEmail(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later.");
+        boolean emailSent = verificationService.createAndSendVerificationToken(savedUser);
+        if (!emailSent) {
+            logger.error("Failed to send verification email to '{}'.", user.getEmail());
+            // Throw the custom exception instead of a generic ResponseStatusException
+            throw new EmailSendingFailedException("User registered but failed to send verification email. Please try again or use /reverify.");
         }
 
-        return savedUser;
+        return response;
     }
-
     /**
      * Authenticates a user by their username and password, and issues JWT tokens upon successful login.
      * If the account is not verified, resends the verification token and returns a 403 Forbidden error.

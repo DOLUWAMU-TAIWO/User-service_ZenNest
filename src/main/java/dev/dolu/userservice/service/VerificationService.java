@@ -4,6 +4,8 @@ import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.models.VerificationToken;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.repository.VerificationTokenRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ public class VerificationService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private static final Logger logger = LoggerFactory.getLogger(VerificationService.class);
 
     @Autowired
     public VerificationService(VerificationTokenRepository verificationTokenRepository,
@@ -45,23 +48,35 @@ public class VerificationService {
 
     // Step 2: Create and send verification token using TokenGenerator
     @Transactional
-    public void createAndSendVerificationToken(User user) throws MessagingException {
-        // Clear any previous tokens for this user to ensure only one valid token at a time
-        verificationTokenRepository.deleteByUser(user);
+    public boolean createAndSendVerificationToken(User user) {
+        try {
+            // Clear previous tokens for this user
+            verificationTokenRepository.deleteByUser(user);
 
-        // Generate a token with a 5-minute expiry time
-        String token = TokenGenerator.generateToken(6);  // 6-character alphanumeric token
-        LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(5);
+            // Generate a token and set expiry
+            String token = TokenGenerator.generateToken(6);
+            LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(5);
 
-        // Save the new token to the database
-        VerificationToken verificationToken = new VerificationToken(token, user, expiryDate);
-        verificationTokenRepository.save(verificationToken);
+            // Save token
+            VerificationToken verificationToken = new VerificationToken(token, user, expiryDate);
+            verificationTokenRepository.save(verificationToken);
 
-        // Build verification URL with token as a query parameter
-        String verificationUrl = "http://localhost:3000/verify?token=" + token;
+            // Build verification URL
+            String verificationUrl = "http://localhost:3000/verify?token=" + token;
 
-        // Send the verification email
-        emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
+            // Send the email and check the response
+            boolean sent = emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
+            if (!sent) {
+                logger.error("Failed to send verification email to '{}'.", user.getEmail());
+                return false;  // Indicate email sending failure
+            }
+            return true;  // Email sent successfully
+
+        } catch (Exception e) {
+            // Log any unexpected errors
+            logger.error("Exception while sending verification email to '{}'.", user.getEmail(), e);
+            return false;
+        }
     }
 
 

@@ -1,6 +1,5 @@
 package dev.dolu.userservice.service;
 
-
 import dev.dolu.userservice.models.EmailRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -10,17 +9,24 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 @Service
 public class EmailService {
 
     private final RestTemplate restTemplate;
-
 
     @Value("${email.service.url}")
     private String emailServiceUrl;
 
     @Value("${email.service.api-key}")
     private String apiKey;
+
+    // Shared executor for virtual threads using JDK 21's approach
+    private final ExecutorService virtualThreadExecutor =
+            Executors.newThreadPerTaskExecutor(Thread.ofVirtual().factory());
 
     public EmailService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -74,27 +80,29 @@ public class EmailService {
     // 🚀 Function 3: Generic Email Sending Function (Used Internally)
     private boolean sendEmail(String to, String subject, String content) {
         try {
-            // Create email request DTO
-            EmailRequest emailRequest = new EmailRequest(to, subject, content);
+            return CompletableFuture.supplyAsync(() -> {
+                // Create email request DTO
+                EmailRequest emailRequest = new EmailRequest(to, subject, content);
 
-            // Set headers with API key
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Content-Type", "application/json");
-            headers.set("Authorization", "Bearer " + apiKey); // Secure API key usage
+                // Set headers with API key
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Content-Type", "application/json");
+                headers.set("Authorization", "Bearer " + apiKey);
 
-            // Create HTTP request entity
-            HttpEntity<EmailRequest> requestEntity = new HttpEntity<>(emailRequest, headers);
+                // Create HTTP request entity
+                HttpEntity<EmailRequest> requestEntity = new HttpEntity<>(emailRequest, headers);
 
-            // Send HTTP request to external email microservice
-            ResponseEntity<String> response = restTemplate.exchange(
-                    emailServiceUrl,
-                    HttpMethod.POST,
-                    requestEntity,
-                    String.class
-            );
+                // Send HTTP request to external email microservice
+                ResponseEntity<String> response = restTemplate.exchange(
+                        emailServiceUrl,
+                        HttpMethod.POST,
+                        requestEntity,
+                        String.class
+                );
 
-            // Return true if email was successfully sent
-            return response.getStatusCode().is2xxSuccessful();
+                // Return true if email was successfully sent
+                return response.getStatusCode().is2xxSuccessful();
+            }, virtualThreadExecutor).get();
         } catch (Exception e) {
             System.err.println("Failed to send email: " + e.getMessage());
             return false;
