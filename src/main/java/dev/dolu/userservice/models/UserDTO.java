@@ -1,9 +1,9 @@
 package dev.dolu.userservice.models;
 
-import dev.dolu.userservice.models.User;
+import java.util.UUID;
 
 public class UserDTO {
-    private Long id;
+    private UUID id;
     private String username;
     private String email;
 
@@ -15,11 +15,11 @@ public class UserDTO {
     }
 
     // Getters and setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

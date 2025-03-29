@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .authorizeRequests(authorize -> authorize
                 .requestMatchers(
                         "/error",
+                        "/graphql",
+                        "graphiql",
                         "/api/users/register",
                         "/api/users/{id}",
                         "/api/users/login",
@@ -47,6 +49,7 @@ public class SecurityConfig {
                         "/api/users/logout",
                         "/api/users/verify",
                         "/",
+                        "/favicon.ico",
                         "/api/users/all",
                         "/api/users/search",
                         "/api/users/verify-email",

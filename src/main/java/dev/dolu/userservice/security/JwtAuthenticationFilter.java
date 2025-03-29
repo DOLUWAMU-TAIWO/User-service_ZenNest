@@ -2,6 +2,7 @@ package dev.dolu.userservice.security;
 
 import dev.dolu.userservice.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Component
+@Order(2)  // Processed after the API key filter
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
@@ -35,12 +37,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String requestPath = request.getRequestURI();
-                //paths that require auth
 
-        if (requestPath.equals("/api/users/login") ||
-                requestPath.equals("/api/users/register") ||
-                requestPath.equals("/api/users/verify") ||
-                requestPath.equals("/api/users/resend-verification")) {
+        // Skip JWT authentication for public endpoints
+        if (isPublicEndpoint(requestPath)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -70,19 +69,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     logger.log(Level.INFO, "Authenticated user: {0}", username);
+                } else {
+                    logger.log(Level.WARNING, "User not found for token: {0}", jwt);
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
+                    return;
                 }
             } else {
-                logger.log(Level.WARNING, "JWT is invalid or expired for request: {0}", request.getRequestURI());
+                logger.log(Level.WARNING, "Invalid or expired JWT for request: {0}", request.getRequestURI());
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT is invalid or expired");
+                return;
             }
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Cannot set user authentication: ", ex);
+            logger.log(Level.SEVERE, "Error during JWT authentication: ", ex);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error during authentication");
+            return;
         }
 
         // Proceed with the filter chain
         filterChain.doFilter(request, response);
     }
-
-
 
     // Helper method to extract JWT from the Authorization header
     private String getJwtFromRequest(HttpServletRequest request) {
@@ -91,5 +96,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    // Helper method to check if the endpoint is public
+    private boolean isPublicEndpoint(String requestPath) {
+        return requestPath.equals("/api/users/login") ||
+                requestPath.equals("/api/users/register") ||
+                requestPath.equals("/api/users/verify") ||
+                requestPath.equals("/api/users/resend-verification") ||
+                requestPath.startsWith("/actuator") ||
+                requestPath.equals("/api/users/health") ||
+                requestPath.equals("/favicon.ico")||
+                requestPath.startsWith("/graphql") ||      // Exclude GraphQL endpoints
+                requestPath.startsWith("/graphiql");         // Exclude GraphiQL if needed
     }
 }

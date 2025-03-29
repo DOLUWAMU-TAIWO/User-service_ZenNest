@@ -17,10 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -202,7 +199,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+    public ResponseEntity<?> getUserById(@PathVariable UUID id) {
         Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
@@ -239,19 +236,12 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<UserDTO>> searchUsers(@RequestParam("query") String query) {
-        List<UserDTO> users = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query)
-                .stream()
-                .map(UserDTO::new)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(users);
-    }
+
 
 
 
     @PostMapping("/batch")
-    public ResponseEntity<?> getUsersByIds(@RequestBody List<Long> userIds) {
+    public ResponseEntity<?> getUsersByIds(@RequestBody List<UUID> userIds) {
         List<User> users = userRepository.findAllById(userIds);
         return ResponseEntity.ok(users);
     }

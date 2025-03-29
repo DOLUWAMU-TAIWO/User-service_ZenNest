@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -118,7 +119,7 @@ public class UserService {
      * @param userId The user's ID.
      * @return The User object if found, or null if not found.
      */
-    public User findUserById(Long userId) {
+    public User findUserById(UUID userId) {
         return userRepository.findById(userId).orElse(null);
     }
 }
