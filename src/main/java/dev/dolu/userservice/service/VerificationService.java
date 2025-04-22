@@ -24,7 +24,8 @@ public class VerificationService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
-    private static final String VERIFICATION_URL_PREFIX = "http://localhost:3000/verify";
+    // TODO: Replace hardcoded URL with environment variable
+    private static final String VERIFICATION_URL_PREFIX = "https://qorelabs.xyz/verify";
     private final CustomMetricService customMetricService;
     private static final Logger logger = LoggerFactory.getLogger(VerificationService.class);
 
