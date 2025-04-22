@@ -35,6 +35,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // Find users by city
     List<User> findByCity(String city);
 
+
+
     // Find users by alumni status
     List<User> findByAlumniStatus(AlumniStatus status);
 

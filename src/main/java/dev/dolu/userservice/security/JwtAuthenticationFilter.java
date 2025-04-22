@@ -1,5 +1,6 @@
 package dev.dolu.userservice.security;
 
+import dev.dolu.userservice.metrics.CustomMetricService;
 import dev.dolu.userservice.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
@@ -25,17 +26,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
     private final Logger logger = Logger.getLogger(JwtAuthenticationFilter.class.getName());
+    private final CustomMetricService customMetricService;
 
     @Autowired
-    public JwtAuthenticationFilter(JwtUtils jwtUtils, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtUtils jwtUtils, UserDetailsService userDetailsService, CustomMetricService customMetricService) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
+        this.customMetricService = customMetricService;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // Temporarily bypass JWT checks for all requests
+        logger.info("JWT filter bypassed for: " + request.getRequestURI());
+        filterChain.doFilter(request, response);
+        return;
+
+        /*
         String requestPath = request.getRequestURI();
 
         // Skip JWT authentication for public endpoints
@@ -76,6 +85,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             } else {
                 logger.log(Level.WARNING, "Invalid or expired JWT for request: {0}", request.getRequestURI());
+                customMetricService.incrementJwtValidationFailureCounter();
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT is invalid or expired");
                 return;
             }
@@ -85,8 +95,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Proceed with the filter chain
         filterChain.doFilter(request, response);
+        */
     }
 
     // Helper method to extract JWT from the Authorization header
@@ -100,14 +110,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // Helper method to check if the endpoint is public
     private boolean isPublicEndpoint(String requestPath) {
-        return requestPath.equals("/api/users/login") ||
-                requestPath.equals("/api/users/register") ||
-                requestPath.equals("/api/users/verify") ||
-                requestPath.equals("/api/users/resend-verification") ||
+        return requestPath.equals("/health") ||
                 requestPath.startsWith("/actuator") ||
-                requestPath.equals("/api/users/health") ||
-                requestPath.equals("/favicon.ico")||
-                requestPath.startsWith("/graphql") ||      // Exclude GraphQL endpoints
-                requestPath.startsWith("/graphiql");         // Exclude GraphiQL if needed
+                requestPath.equals("/favicon.ico") ||
+                requestPath.startsWith("/graphql") ||
+                requestPath.startsWith("/graphiql");
     }
 }

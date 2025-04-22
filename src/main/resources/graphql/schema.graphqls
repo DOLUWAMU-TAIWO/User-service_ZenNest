@@ -1,3 +1,5 @@
+scalar LocalDateTime
+
 enum Gender {
     MALE
     FEMALE
@@ -36,13 +38,15 @@ type User {
     role: Role!
     enabled: Boolean!
     socialMediaLinks: [SocialMediaLink]
-    createdAt: String
-    updatedAt: String
+    createdAt: LocalDateTime
+    updatedAt: LocalDateTime
 }
 
 type Query {
     # Get a user by ID
     getUserById(id: ID!): User
+
+    getUserByEmail(email: String!): User
 
     # Get all users
     getAllUsers: [User]

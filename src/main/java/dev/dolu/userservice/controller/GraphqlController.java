@@ -126,6 +126,17 @@ public class GraphqlController {
     }
 
     @QueryMapping
+    public User getUserByEmail(@Argument String email) {
+        logger.info("Fetching user by email: {}", email);
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            logger.warn("User not found with email: {}", email);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        return user;
+    }
+
+    @QueryMapping
     public int countUsers() {
         List<User> users = userRepository.findAll();
         int count = users.size();

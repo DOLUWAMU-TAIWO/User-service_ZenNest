@@ -1,5 +1,6 @@
 package dev.dolu.userservice.service;
 
+import dev.dolu.userservice.metrics.CustomMetricService;
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.utils.JwtUtils;
@@ -27,12 +28,15 @@ public class UserService {
     private final JwtUtils jwtUtils;
     private final VerificationService verificationService;
 
+    private final CustomMetricService customMetricService;
+
     @Autowired
-    public UserService(UserRepository userRepository, JwtUtils jwtUtils, VerificationService verificationService) {
+    public UserService(UserRepository userRepository, JwtUtils jwtUtils, VerificationService verificationService, CustomMetricService customMetricService) {
         this.passwordEncoder = new BCryptPasswordEncoder();
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.verificationService = verificationService;
+        this.customMetricService = customMetricService;
     }
 
     /**
@@ -45,29 +49,43 @@ public class UserService {
     public Map<String, Object> registerUser(User user) {
         Map<String, Object> response = new HashMap<>();
 
+        // Validate for duplicate username
         if (userRepository.existsByUsername(user.getUsername())) {
             logger.warn("Registration failed: Username '{}' is already taken.", user.getUsername());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
         }
 
+        // Validate for duplicate email
         if (userRepository.existsByEmail(user.getEmail())) {
             logger.warn("Registration failed: Email '{}' is already in use.", user.getEmail());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
         }
 
+        // Start timing registration process
+        long startTime = System.currentTimeMillis();
+
+        // Process user details
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setEnabled(false);
 
+        // Save user to repository
         User savedUser = userRepository.save(user);
         response.put("user", savedUser);
         response.put("message", "User registered successfully. Please verify your email.");
 
+        // Send verification email and ensure it was sent successfully
         boolean emailSent = verificationService.createAndSendVerificationToken(savedUser);
         if (!emailSent) {
             logger.error("Failed to send verification email to '{}'.", user.getEmail());
-            // Throw the custom exception instead of a generic ResponseStatusException
             throw new EmailSendingFailedException("User registered but failed to send verification email. Please try again or use /reverify.");
         }
+
+        // Calculate the duration and record the registration time metric
+        long duration = System.currentTimeMillis() - startTime;
+        customMetricService.recordUserRegistrationTime(duration);
+
+        // Increment the user registration count metric only after email is sent
+        customMetricService.incrementUserRegistrationCounter();
 
         return response;
     }
@@ -81,6 +99,8 @@ public class UserService {
      * @throws MessagingException If an error occurs while resending the verification token.
      */
     public Map<String, String> login(String username, String password) throws MessagingException {
+        long startTime = System.currentTimeMillis();
+
         // Retrieve user from database
         User user = userRepository.findByUsername(username);
 
@@ -101,14 +121,23 @@ public class UserService {
             // Store refresh token securely (Redis-backed storage)
             jwtUtils.storeRefreshToken(refreshToken, username);
 
-            // Return the tokens
+            // Calculate duration and record login time
+            long duration = System.currentTimeMillis() - startTime;
+            customMetricService.recordLoginTime(duration);
+
+            // Increment success counter and return tokens
+            customMetricService.incrementLoginSuccessCounter();
             Map<String, String> tokens = new HashMap<>();
             tokens.put("accessToken", accessToken);
             tokens.put("refreshToken", refreshToken);
             return tokens;
         }
 
-        // Invalid credentials
+        // Record login time for failed attempt as well
+        long duration = System.currentTimeMillis() - startTime;
+        customMetricService.recordLoginTime(duration);
+        customMetricService.incrementLoginFailureCounter();
+
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
     }
 

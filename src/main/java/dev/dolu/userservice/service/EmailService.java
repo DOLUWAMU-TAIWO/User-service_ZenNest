@@ -1,6 +1,9 @@
 package dev.dolu.userservice.service;
 
+import dev.dolu.userservice.metrics.CustomMetricService;
 import dev.dolu.userservice.models.EmailRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -16,7 +19,9 @@ import java.util.concurrent.Executors;
 @Service
 public class EmailService {
 
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final RestTemplate restTemplate;
+    private final CustomMetricService customMetricService;
 
     @Value("${email.service.url}")
     private String emailServiceUrl;
@@ -28,8 +33,9 @@ public class EmailService {
     private final ExecutorService virtualThreadExecutor =
             Executors.newThreadPerTaskExecutor(Thread.ofVirtual().factory());
 
-    public EmailService(RestTemplate restTemplate) {
+    public EmailService(RestTemplate restTemplate, CustomMetricService customMetricService) {
         this.restTemplate = restTemplate;
+        this.customMetricService = customMetricService;
     }
 
     // 🟢 Function 1: Send Test Email (General Purpose)
@@ -42,7 +48,6 @@ public class EmailService {
     // 🔵 Function 2: Send Verification Email (For New Users)
     public boolean sendVerificationEmail(String to, String verificationLink) {
         String subject = "Verify Your Email - QoreLabs";
-
         String content = "<!DOCTYPE html>" +
                 "<html lang='en'>" +
                 "<head>" +
@@ -79,8 +84,9 @@ public class EmailService {
 
     // 🚀 Function 3: Generic Email Sending Function (Used Internally)
     private boolean sendEmail(String to, String subject, String content) {
+        long startTime = System.currentTimeMillis();
         try {
-            return CompletableFuture.supplyAsync(() -> {
+            boolean result = CompletableFuture.supplyAsync(() -> {
                 // Create email request DTO
                 EmailRequest emailRequest = new EmailRequest(to, subject, content);
 
@@ -99,12 +105,19 @@ public class EmailService {
                         requestEntity,
                         String.class
                 );
-
-                // Return true if email was successfully sent
+                // Increment sent counter if successful
+                customMetricService.incrementEmailSentCounter();
                 return response.getStatusCode().is2xxSuccessful();
             }, virtualThreadExecutor).get();
+
+            long duration = System.currentTimeMillis() - startTime;
+            customMetricService.recordEmailSendingTime(duration);
+            return result;
         } catch (Exception e) {
-            System.err.println("Failed to send email: " + e.getMessage());
+            long duration = System.currentTimeMillis() - startTime;
+            customMetricService.recordEmailSendingTime(duration);
+            logger.error("Failed to send email: {}", e.getMessage(), e);
+            customMetricService.incrementEmailFailureCounter();
             return false;
         }
     }

@@ -20,10 +20,15 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     private static final String API_KEY = System.getenv("SERVICE_PASSWORD");
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.equals("/health") || path.startsWith("/actuator");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Fetch the API key from the custom header
         String apiKey = request.getHeader("X-API-KEY");
 
         if (apiKey == null || !API_KEY.equals(apiKey)) {
@@ -33,7 +38,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             return;
         }
 
-        logger.info("API key authenticated successfully");
+        logger.info("API key authenticated successfully for: {}", request.getRequestURI());
         filterChain.doFilter(request, response);
     }
 }

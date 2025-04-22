@@ -1,5 +1,6 @@
 package dev.dolu.userservice.service;
 
+import dev.dolu.userservice.metrics.CustomMetricService;
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.models.VerificationToken;
 import dev.dolu.userservice.repository.UserRepository;
@@ -23,13 +24,16 @@ public class VerificationService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private static final String VERIFICATION_URL_PREFIX = "http://localhost:3000/verify";
+    private final CustomMetricService customMetricService;
     private static final Logger logger = LoggerFactory.getLogger(VerificationService.class);
 
     @Autowired
     public VerificationService(VerificationTokenRepository verificationTokenRepository,
-                               UserRepository userRepository, EmailService emailService) {
+                               UserRepository userRepository, EmailService emailService, CustomMetricService customMetricService) {
         this.verificationTokenRepository = verificationTokenRepository;
         this.userRepository = userRepository;
+        this.customMetricService = customMetricService;
         this.emailService = emailService;
     }
 
@@ -62,7 +66,7 @@ public class VerificationService {
             verificationTokenRepository.save(verificationToken);
 
             // Build verification URL
-            String verificationUrl = "http://localhost:3000/verify?token=" + token;
+            String verificationUrl = VERIFICATION_URL_PREFIX + "?token=" + token;
 
             // Send the email and check the response
             boolean sent = emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
@@ -86,26 +90,28 @@ public class VerificationService {
         if (optionalToken.isPresent()) {
             VerificationToken verificationToken = optionalToken.get();
 
-            // Log token info for debugging
-            System.out.println("Token found: " + token);
-            System.out.println("Expiry date: " + verificationToken.getExpiryDate());
+            // Log token details for debugging
+            logger.debug("Token found: {}", token);
+            logger.debug("Expiry date: {}", verificationToken.getExpiryDate());
 
             // Check if the token has expired
             if (verificationToken.getExpiryDate().isAfter(LocalDateTime.now())) {
                 User user = verificationToken.getUser();
                 user.setEnabled(true);
                 userRepository.save(user);  // Update user status in the database
+                customMetricService.incrementUserActivationSuccessCounter();
 
                 // Remove the token after successful verification
                 verificationTokenRepository.delete(verificationToken);
                 return true;
             } else {
-                System.out.println("Token expired");
+                logger.warn("Token expired: {}", token);
             }
         } else {
-            System.out.println("Token not found or invalid");
+            logger.warn("Token not found or invalid: {}", token);
         }
 
+        customMetricService.incrementUserActivationFailureCounter();
         return false;  // Return false if the token is invalid or expired
     }
 
@@ -122,7 +128,7 @@ public class VerificationService {
         verificationTokenRepository.save(newToken);
 
         // Send a new verification email
-        String verificationUrl = "http://localhost:3000/verify?token=" + token;
+        String verificationUrl = VERIFICATION_URL_PREFIX + "?token=" + token;
         emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
     }
 
