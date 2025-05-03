@@ -321,7 +321,7 @@ public class GraphqlController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
     }
-
+    //TODO: Handle deletion regardless of verification table
     @MutationMapping
     public boolean deleteUser(@Argument UUID id) {
         logger.info("Attempting to delete user with ID: {}", id);

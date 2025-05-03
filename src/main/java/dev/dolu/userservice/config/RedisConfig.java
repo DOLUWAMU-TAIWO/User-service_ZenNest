@@ -7,7 +7,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
     @Configuration
     public class RedisConfig {
-
+        //TODO: Fix redis In docker compose !
         @Bean
         public LettuceConnectionFactory redisConnectionFactory() {
             return new LettuceConnectionFactory();
