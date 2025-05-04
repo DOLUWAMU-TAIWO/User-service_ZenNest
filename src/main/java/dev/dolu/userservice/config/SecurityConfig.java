@@ -1,9 +1,10 @@
 package dev.dolu.userservice.config;
 
 import dev.dolu.userservice.metrics.CustomMetricService;
+import dev.dolu.userservice.security.ApiKeyFilter;
 import dev.dolu.userservice.security.JwtAuthenticationFilter;
-import dev.dolu.userservice.utils.JwtUtils;
 import dev.dolu.userservice.service.CustomUserDetailsService;
+import dev.dolu.userservice.utils.JwtUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -19,15 +20,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
-/**
- * Security configuration for the UserService.
- * <p>
- * Configures JWT-based authentication, stateless session management,
- * and secure CORS settings to allow requests from approved frontend origins.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -41,6 +35,9 @@ public class SecurityConfig {
     @Autowired
     private CustomMetricService customMetricService;
 
+    @Autowired
+    private ApiKeyFilter apiKeyFilter;
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -49,14 +46,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults()) // Enable CORS using corsConfigurationSource
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeRequests(authorize -> authorize
-                        // ✅ Allow all OPTIONS requests (for CORS preflight)
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // ✅ Your public endpoints
                         .requestMatchers(
                                 "/health",
                                 "/actuator/**",
@@ -80,14 +74,11 @@ public class SecurityConfig {
                                 "/api/users/refresh-token",
                                 "/api/test-email"
                         ).permitAll()
-
-                        // 🔐 Admin endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                        // 🔒 Everything else requires authentication
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter(), ApiKeyFilter.class);
 
         return http.build();
     }
@@ -97,18 +88,13 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtUtils, customUserDetailsService, customMetricService);
     }
 
-    /**
-     * CORS configuration for allowing trusted frontend origins and secure headers.
-     *
-     * @return CorsConfigurationSource for Spring Security
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "https://vhsvcalumni.org",
-                "https://vhsvcalumni.org/",  // 🔥 Handles buggy Origin header from iOS
+                "https://vhsvcalumni.org/",
                 "https://qorelabs.online",
                 "https://qorelabs.xyz",
                 "https://qorelabs.space",
@@ -122,6 +108,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-
 }
