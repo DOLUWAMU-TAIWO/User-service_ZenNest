@@ -99,7 +99,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                "https://vhsvcalumni.org*",
+                "https://vhsvcalumni.org",
+                "https://vhsvcalumni.org/",  // 🔥 Handles buggy Origin header from iOS
                 "https://qorelabs.online",
                 "https://qorelabs.xyz",
                 "https://qorelabs.space",
