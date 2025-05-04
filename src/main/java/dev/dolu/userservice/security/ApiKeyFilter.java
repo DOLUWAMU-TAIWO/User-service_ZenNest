@@ -20,11 +20,13 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     private static final String API_KEY = System.getenv("SERVICE_PASSWORD");
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/health") || path.startsWith("/actuator");
+        // ✅ Skip health checks, actuator, and ALL OPTIONS (CORS preflight)
+        return request.getMethod().equalsIgnoreCase("OPTIONS")
+                || path.equals("/health")
+                || path.startsWith("/actuator");
     }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
