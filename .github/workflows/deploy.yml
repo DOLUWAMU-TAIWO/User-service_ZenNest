@@ -43,6 +43,3 @@ jobs:
           docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service .
           docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-
-
-     
