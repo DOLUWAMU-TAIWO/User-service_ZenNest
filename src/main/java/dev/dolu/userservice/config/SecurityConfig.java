@@ -99,8 +99,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                "https://vhsvcalumni.org",     // ✅ main domain
-                "https://vhsvcalumni.org/*",   // ✅ allow subpaths (e.g., /AlumniRegistration)
+                "https://vhsvcalumni.org*",
                 "https://qorelabs.online",
                 "https://qorelabs.xyz",
                 "https://qorelabs.space",
@@ -114,5 +113,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 
 }
