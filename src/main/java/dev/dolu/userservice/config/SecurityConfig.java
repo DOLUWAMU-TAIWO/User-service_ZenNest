@@ -99,7 +99,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "https://vhsvc-alumni.org",
+                "https://vhsvcalumni.org",
                 "https://qorelabs.online",
                 "https://qorelabs.xyz",
                 "https://qorelabs.space",
