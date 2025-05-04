@@ -97,20 +97,22 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+        configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                "https://vhsvcalumni.org",
+                "https://vhsvcalumni.org",     // ✅ main domain
+                "https://vhsvcalumni.org/*",   // ✅ allow subpaths (e.g., /AlumniRegistration)
                 "https://qorelabs.online",
                 "https://qorelabs.xyz",
                 "https://qorelabs.space",
                 "https://qorelabs.store"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-api-key")); // ✅ include x-api-key!
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-api-key"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 }
