@@ -49,10 +49,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults()) // ✅ Enable CORS using the corsConfigurationSource bean
+                .cors(Customizer.withDefaults()) // Enable CORS using corsConfigurationSource
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeRequests(authorize -> authorize
+                        // ✅ Allow all OPTIONS requests (for CORS preflight)
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ✅ Your public endpoints
                         .requestMatchers(
                                 "/health",
                                 "/actuator/**",
@@ -76,7 +80,11 @@ public class SecurityConfig {
                                 "/api/users/refresh-token",
                                 "/api/test-email"
                         ).permitAll()
+
+                        // 🔐 Admin endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // 🔒 Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
