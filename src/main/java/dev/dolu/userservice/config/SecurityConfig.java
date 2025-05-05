@@ -21,6 +21,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -91,7 +92,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Arrays.asList(
+        config.setAllowedOrigins(List.of(
                 "https://vhsvcalumni.org",
                 "http://localhost:5173",
                 "https://qorelabs.online",
@@ -99,9 +100,8 @@ public class SecurityConfig {
                 "https://qorelabs.space",
                 "https://qorelabs.store"
         ));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS", "PUT", "DELETE"));
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-API-KEY"));
-        config.setExposedHeaders(Arrays.asList("Authorization"));
+        config.setAllowedMethods(List.of("GET", "POST", "OPTIONS", "PUT", "DELETE"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-KEY"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
