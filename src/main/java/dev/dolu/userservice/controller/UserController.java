@@ -10,6 +10,8 @@ import dev.dolu.userservice.utils.JwtUtils;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,84 +27,57 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/users")
 public class UserController {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+
     private final UserService userService;
     private final JwtUtils jwtUtils;
     private final VerificationService verificationService;
     private final UserRepository userRepository;
 
-    // Constructor-based dependency injection for UserService
     @Autowired
     public UserController(UserService userService, JwtUtils jwtUtils, VerificationService verificationService, UserRepository userRepository) {
         this.userService = userService;
         this.jwtUtils = jwtUtils;
-        this.userRepository= userRepository;
-
-
+        this.userRepository = userRepository;
         this.verificationService = verificationService;
     }
+
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Log the login attempt
-            System.out.println("Login attempt for user: " + loginRequest.getUsername());
-
-            // Authenticate the user and generate tokens
+            logger.info("Login attempt for user: {}", loginRequest.getUsername());
             Map<String, String> tokens = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
-
-            // Return the tokens if authentication succeeds
             return new ResponseEntity<>(tokens, HttpStatus.OK);
-
         } catch (ResponseStatusException e) {
-            // Handle custom exceptions from the service layer
-            return ResponseEntity
-                    .status(e.getStatusCode())
-                    .body(Map.of("error", e.getReason()));
+            logger.warn("Login failed: {}", e.getReason());
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
         } catch (Exception e) {
-            // Catch any unexpected exceptions
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "An unexpected error occurred."));
+            logger.error("Unexpected error during login", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
         }
     }
 
-
-
-
-
-
-
-
-    /**
-     * Handles HTTP POST requests for user registration.
-     * The @Valid annotation triggers validation for the User object,
-     * ensuring fields meet validation constraints (e.g., email format, required fields).
-     *
-     * @param user User object containing registration details.
-     * @return ResponseEntity with the saved User and HTTP status 201 (Created) if successful.
-     */
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> registerUser(@Valid @RequestBody User user) {
+        logger.info("Registering user: {}", user.getEmail());
         Map<String, Object> response = userService.registerUser(user);
-
         if (response.containsKey("emailStatus")) {
-            return new ResponseEntity<>(response, HttpStatus.ACCEPTED); // 202 Accepted (Partial Success)
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
         }
-
-        return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created (Full Success)
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // Other CRUD endpoints for managing user data...
-    // New Logout Endpoint
     @PostMapping("/logout")
     public ResponseEntity<?> logoutUser(HttpServletRequest request) {
         String jwt = request.getHeader("Authorization");
-
         if (jwt != null && jwt.startsWith("Bearer ")) {
-            jwt = jwt.substring(7);  // Remove "Bearer " prefix
+            jwt = jwt.substring(7);
             long expiration = jwtUtils.getExpirationFromToken(jwt);
             jwtUtils.blacklistToken(jwt, expiration, TimeUnit.MILLISECONDS);
+            logger.info("User logged out. Token blacklisted.");
             return new ResponseEntity<>("Logged out successfully", HttpStatus.OK);
         }
+        logger.warn("Logout failed: Invalid token format");
         return new ResponseEntity<>("Invalid token", HttpStatus.BAD_REQUEST);
     }
 
@@ -110,53 +85,31 @@ public class UserController {
     public ResponseEntity<?> refreshToken(HttpServletRequest request, @RequestBody Map<String, String> refreshTokenRequest) {
         String refreshToken = refreshTokenRequest.get("refreshToken");
         String username = jwtUtils.getUsernameFromJwtToken(refreshToken);
-
+        logger.info("Refresh token requested by user: {}", username);
         if (username != null && jwtUtils.validateRefreshToken(refreshToken) && jwtUtils.isRefreshTokenValid(username, refreshToken)) {
             String newAccessToken = jwtUtils.generateJwtToken(username);
-
             Map<String, String> response = new HashMap<>();
             response.put("accessToken", newAccessToken);
             return ResponseEntity.ok(response);
         } else {
+            logger.warn("Invalid or expired refresh token for user: {}", username);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token.");
         }
     }
 
-
-
-
-
-    /**
-     * Exception handler to catch validation errors on invalid user input.
-     * This method is triggered when a MethodArgumentNotValidException is thrown,
-     * which occurs if the @Valid annotation detects invalid data.
-     *
-     * @param ex The MethodArgumentNotValidException that contains details about validation errors.
-     * @return ResponseEntity with a map of field names and error messages, and HTTP 400 (Bad Request) status.
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        // Creates a map to store field-specific error messages
         Map<String, String> errors = new HashMap<>();
-
-        // Iterates through each field error in the exception's binding result
         ex.getBindingResult().getFieldErrors().forEach(error ->
-                // Maps the field name to its default error message
                 errors.put(error.getField(), error.getDefaultMessage()));
-
-        // Returns the map of errors with HTTP 400 status, indicating a bad request due to validation failure
+        logger.warn("Validation errors: {}", errors);
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-
-
-
-
-
     @GetMapping("/verify")
     public ResponseEntity<String> verifyUser(@RequestParam("token") String token) {
+        logger.info("Verification attempt with token: {}", token);
         boolean isVerified = verificationService.verifyToken(token);
-
         if (isVerified) {
             return ResponseEntity.ok("Account verified successfully!");
         } else {
@@ -167,17 +120,17 @@ public class UserController {
     @PostMapping("/resend-verification")
     public ResponseEntity<String> resendVerification(@RequestBody Map<String, String> request) {
         String email = request.get("email");
+        logger.info("Resend verification requested for email: {}", email);
         User user = userRepository.findByEmail(email);
-
         if (user != null && !user.isEnabled()) {
             try {
                 verificationService.resendVerificationToken(user);
                 return ResponseEntity.ok("A new verification email has been sent to " + email);
             } catch (MessagingException e) {
+                logger.error("Failed to send verification email", e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to send verification email.");
             }
         }
-
         return ResponseEntity.badRequest().body("User not found or already verified.");
     }
 
@@ -185,7 +138,7 @@ public class UserController {
     public ResponseEntity<?> getUserDetails(HttpServletRequest request) {
         String jwt = request.getHeader("Authorization").substring(7);
         String username = jwtUtils.getUsernameFromJwtToken(jwt);
-
+        logger.info("Fetching user details for: {}", username);
         User user = userRepository.findByUsername(username);
         if (user != null) {
             Map<String, Object> userInfo = new HashMap<>();
@@ -194,30 +147,28 @@ public class UserController {
             userInfo.put("role", user.getRole());
             return ResponseEntity.ok(userInfo);
         }
-
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable UUID id) {
+        logger.info("Fetching user by ID: {}", id);
         Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
         }
-
-        // Return only the necessary user details
         User userDetails = user.get();
         Map<String, Object> response = Map.of(
                 "id", userDetails.getId(),
                 "username", userDetails.getUsername(),
                 "email", userDetails.getEmail()
         );
-
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/validate-username")
     public ResponseEntity<?> validateUsername(@RequestParam String username) {
+        logger.info("Validating username: {}", username);
         Optional<User> user = Optional.ofNullable(userRepository.findByUsername(username));
         if (user.isPresent()) {
             return ResponseEntity.ok("User is valid");
@@ -226,28 +177,25 @@ public class UserController {
         }
     }
 
-
-
     @GetMapping("/all")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
+        logger.info("Fetching all users");
         List<UserDTO> users = userRepository.findAll().stream()
                 .map(UserDTO::new)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(users);
     }
 
-
-
-
-
     @PostMapping("/batch")
     public ResponseEntity<?> getUsersByIds(@RequestBody List<UUID> userIds) {
+        logger.info("Fetching batch users: {}", userIds);
         List<User> users = userRepository.findAllById(userIds);
         return ResponseEntity.ok(users);
     }
 
     @GetMapping("/get-user")
     public ResponseEntity<?> getUserByUsername(@RequestParam String username) {
+        logger.info("Fetching user by username: {}", username);
         Optional<User> user = Optional.ofNullable(userRepository.findByUsername(username));
         if (user.isPresent()) {
             return ResponseEntity.ok(user.get());
@@ -255,9 +203,4 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
     }
-
-
-
-
 }
-
