@@ -28,7 +28,6 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
     @Autowired private JwtUtils jwtUtils;
     @Autowired private CustomUserDetailsService customUserDetailsService;
     @Autowired private CustomMetricService customMetricService;
@@ -39,12 +38,10 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // 1) Define your CORS rules
     @Bean
-    @Primary
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
+        config.setAllowedOriginPatterns(List.of(
                 "https://vhsvcalumni.org",
                 "http://localhost:5173",
                 "https://qorelabs.online",
@@ -57,23 +54,15 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
-        var source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
+        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", config);
+        return src;
     }
 
-    // 2) Expose a CorsFilter so it runs BEFORE Spring Security
     @Bean
-    public CorsFilter corsFilter(CorsConfigurationSource source) {
-        return new CorsFilter(source);
-    }
-
-    // 3) Security chain: add CorsFilter first, then your filters
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   CorsFilter corsFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .addFilterBefore(corsFilter, UsernamePasswordAuthenticationFilter.class)
+                .cors(Customizer.withDefaults())        // ← picks up corsConfigurationSource()
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -95,7 +84,6 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(jwtAuthenticationFilter(), ApiKeyFilter.class);
-
         return http.build();
     }
 
