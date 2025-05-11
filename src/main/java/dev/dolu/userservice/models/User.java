@@ -46,7 +46,7 @@ public class User {
     private LocalDate dateOfBirth;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Gender gender;
 
     @Column(nullable = true)
