@@ -1,7 +1,6 @@
 package dev.dolu.userservice.models;
 
 public enum Role {
-    USER, ADMIN
-
-
-}
+    USER, ADMIN,TENANT,
+    LANDLORD,
+    }
