@@ -47,6 +47,9 @@ public class SecurityConfig {
                 "https://qorelabs.online",
                 "https://qorelabs.xyz",
                 "https://qorelabs.space",
+                "https://zennest,ng",
+                "https://zennest.dev",
+                "https://zennest.live",
                 "https://qorelabs.store"
         ));
         config.setAllowedMethods(List.of("GET","POST","OPTIONS","PUT","DELETE"));
