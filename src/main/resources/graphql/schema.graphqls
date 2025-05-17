@@ -1,23 +1,10 @@
 scalar LocalDateTime
 
-enum Gender {
-    MALE
-    FEMALE
-}
-
-enum AlumniStatus {
-    ACTIVE
-    INACTIVE
-}
-
 enum Role {
     USER
     ADMIN
-}
-
-type SocialMediaLink {
-    platform: String
-    url: String
+    TENANT
+    LANDLORD
 }
 
 type User {
@@ -27,102 +14,64 @@ type User {
     username: String!
     phoneNumber: String!
     email: String!
-    dateOfBirth: String
-    gender: Gender!
+    password: String!
     profession: String
     city: String
     country: String
-    graduationYear: Int
-    alumniStatus: AlumniStatus
-    chapter: String
+    dateOfBirth: String
     role: Role!
     enabled: Boolean!
-    socialMediaLinks: [SocialMediaLink]
+    verified: Boolean!
+    authProvider: String!
+    profileImage: String
+    activePlan: String
     createdAt: LocalDateTime
     updatedAt: LocalDateTime
 }
 
 type Query {
-    # Get a user by ID
     getUserById(id: ID!): User
-
     getUserByEmail(email: String!): User
-
-    # Get all users
     getAllUsers: [User]
-
-    # Search users by partial username or email
     searchUsers(query: String!): [User]
-
-    # Get users by role
     getUsersByRole(role: Role!): [User]
-
-    # Get users by city
     getUsersByCity(city: String!): [User]
-
-    # Get users by alumni status
-    getUsersByAlumniStatus(status: AlumniStatus!): [User]
-
-    # Get users by graduation year
-    getUsersByGraduationYear(graduationYear: Int!): [User]
-
-    # Get users by gender
-    getUsersByGender(gender: Gender!): [User]
-
-    # Get recent users ordered by creation date
-    getRecentUsers: [User]
-
     getUsersByCountry(country: String!): [User]
-
+    getRecentUsers: [User]
     countUsers: Int
 }
 
 type Mutation {
     createUser(
-        firstName: String!,
-        lastName: String!,
-        username: String!,
-        phoneNumber: String!,
-        email: String!,
-        password: String!,
-        dateOfBirth: String,
-        gender: Gender!,
-        profession: String,
-        city: String,
-        country: String,
-        graduationYear: Int,
-        alumniStatus: AlumniStatus,
-        chapter: String,
-        role: Role!,
-        enabled: Boolean,
-        socialMediaLinks: [SocialMediaLinkInput!]
+        firstName: String!
+        lastName: String!
+        username: String!
+        phoneNumber: String!
+        email: String!
+        password: String!
+        dateOfBirth: String
+        profession: String
+        city: String
+        country: String
+        role: Role!
+        enabled: Boolean
     ): User
 
     updateUser(
-        id: ID!,
-        firstName: String,
-        lastName: String,
-        username: String,
-        phoneNumber: String,
-        email: String,
-        password: String,
-        dateOfBirth: String,
-        gender: Gender,
-        profession: String,
-        city: String,
-        country: String,
-        graduationYear: Int,
-        alumniStatus: AlumniStatus,
-        chapter: String,
-        role: Role,
-        enabled: Boolean,
-        socialMediaLinks: [SocialMediaLinkInput!]
+        id: ID!
+        firstName: String
+        lastName: String
+        username: String
+        phoneNumber: String
+        email: String
+        password: String
+        dateOfBirth: String
+        profession: String
+        city: String
+        country: String
+        role: Role
+        enabled: Boolean
     ): User
 
     deleteUser(id: ID!): Boolean
-}
-
-input SocialMediaLinkInput {
-    platform: String
-    url: String
 }

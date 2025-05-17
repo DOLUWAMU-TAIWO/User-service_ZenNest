@@ -1,35 +1,34 @@
 package dev.dolu.userservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-    @Configuration
-    public class RedisConfig {
-        //TODO: Fix redis In docker compose !
-        @Bean
-        public LettuceConnectionFactory redisConnectionFactory() {
-            return new LettuceConnectionFactory();
-        }
+@Configuration
+public class RedisConfig {
 
-        @Bean
-        public RedisTemplate<String, String> redisTemplate(LettuceConnectionFactory redisConnectionFactory) {
-            // Create a new instance of RedisTemplate with String keys and values
-            RedisTemplate<String, String> template = new RedisTemplate<>();
+    @Value("${spring.data.redis.host}")
+    private String redisHost;
 
-            // Set the connection factory for the RedisTemplate
-            template.setConnectionFactory(redisConnectionFactory);
+    @Value("${spring.data.redis.port}")
+    private int redisPort;
 
-            // Set the serializer for the keys to StringRedisSerializer
-            template.setKeySerializer(new StringRedisSerializer());
-
-            // Set the serializer for the values to StringRedisSerializer
-            template.setValueSerializer(new StringRedisSerializer());
-
-            // Return the configured RedisTemplate instance
-            return template;
-        }
+    @Bean
+    public LettuceConnectionFactory redisConnectionFactory() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(redisHost, redisPort);
+        return new LettuceConnectionFactory(config);
     }
 
-
+    @Bean
+    public RedisTemplate<String, String> redisTemplate(LettuceConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        return template;
+    }
+}

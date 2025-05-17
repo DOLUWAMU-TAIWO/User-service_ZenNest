@@ -79,7 +79,7 @@ class RegisterEndpointTest extends BaseIntegrationTest {
 
         User savedUser = userRepository.findByUsername("testuser");
         assertThat(savedUser).isNotNull();
-        assertThat(savedUser.getEnabled()).isFalse();
+        assertThat(savedUser.isEnabled()).isFalse();
         assertThat(savedUser.getPassword()).isNotEqualTo("SecurePassword123!");
     }
     @Test

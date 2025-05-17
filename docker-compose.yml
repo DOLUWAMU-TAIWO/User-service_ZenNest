@@ -9,6 +9,10 @@ services:
       - "8085:8085"
     env_file:
       - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
     depends_on:
       - postgres
       - redis
@@ -18,7 +22,7 @@ services:
     container_name: postgres
     restart: always
     env_file:
-      - .env  # 👈 Ensure environment variables are loaded
+      - .env
     environment:
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
       POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
@@ -26,14 +30,14 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Persist Data
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:6-alpine
     container_name: redis
     restart: always
     env_file:
-      - .env  # 👈 Ensure environment variables are loaded
+      - .env
     ports:
       - "6379:6379"
 

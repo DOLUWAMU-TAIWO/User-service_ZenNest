@@ -8,6 +8,7 @@ import dev.dolu.userservice.repository.VerificationTokenRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException; // Import MessagingException
@@ -25,7 +26,9 @@ public class VerificationService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     // TODO: Replace hardcoded URL with environment variable
-    private static final String VERIFICATION_URL_PREFIX = "https://qorelabs.xyz/verify";
+    @Value("${verification.url.prefix}")
+    private String verificationUrlPrefix;
+
     private final CustomMetricService customMetricService;
     private static final Logger logger = LoggerFactory.getLogger(VerificationService.class);
 
@@ -67,7 +70,7 @@ public class VerificationService {
             verificationTokenRepository.save(verificationToken);
 
             // Build verification URL
-            String verificationUrl = VERIFICATION_URL_PREFIX + "?token=" + token;
+            String verificationUrl = verificationUrlPrefix + "?token=" + token;
 
             // Send the email and check the response
             boolean sent = emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
@@ -99,6 +102,7 @@ public class VerificationService {
             if (verificationToken.getExpiryDate().isAfter(LocalDateTime.now())) {
                 User user = verificationToken.getUser();
                 user.setEnabled(true);
+                user.setVerified(true);
                 userRepository.save(user);  // Update user status in the database
                 customMetricService.incrementUserActivationSuccessCounter();
 
@@ -129,7 +133,7 @@ public class VerificationService {
         verificationTokenRepository.save(newToken);
 
         // Send a new verification email
-        String verificationUrl = VERIFICATION_URL_PREFIX + "?token=" + token;
+        String verificationUrl = verificationUrlPrefix + "?token=" + token;
         emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
     }
 

@@ -21,14 +21,17 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return "OPTIONS".equalsIgnoreCase(request.getMethod());
+        String path = request.getRequestURI();
+        return "OPTIONS".equalsIgnoreCase(request.getMethod()) ||
+                path.startsWith("/login/oauth2/") ||
+                path.startsWith("/oauth2/authorization");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String key = request.getHeader("X-API-KEY");
-        logger.info("Received API key: {}", key);  // SLF4J syntax
+        logger.info("Received API key: {}", key);
 
         if (key == null || !key.equals(API_KEY)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

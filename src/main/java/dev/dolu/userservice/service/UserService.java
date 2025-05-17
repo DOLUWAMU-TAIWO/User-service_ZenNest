@@ -50,7 +50,8 @@ public class UserService {
         Map<String, Object> response = new HashMap<>();
 
         // Validate for duplicate username
-        if (userRepository.existsByUsername(user.getUsername())) {
+        // Validate for duplicate username if present
+        if (user.getUsername() != null && userRepository.existsByUsername(user.getUsername())) {
             logger.warn("Registration failed: Username '{}' is already taken.", user.getUsername());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
         }
@@ -90,21 +91,22 @@ public class UserService {
         return response;
     }
     /**
-     * Authenticates a user by their username and password, and issues JWT tokens upon successful login.
+     * Authenticates a user by their email and password, and issues JWT tokens upon successful login.
      * If the account is not verified, resends the verification token and returns a 403 Forbidden error.
      *
-     * @param username The user's username.
+     * @param email The user's email.
      * @param password The user's raw password.
      * @return A map containing the access and refresh tokens.
      * @throws MessagingException If an error occurs while resending the verification token.
      */
-    public Map<String, String> login(String username, String password) throws MessagingException {
+    public Map<String, String> login(String email, String password) throws MessagingException {
         long startTime = System.currentTimeMillis();
 
         // Retrieve user from database
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByEmail(email);
 
-        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+        if (user != null && passwordEncoder.matches(password, user
+                .getPassword())) {
             // If user exists and password matches
 
             // Check if user is enabled (verified)
@@ -115,11 +117,11 @@ public class UserService {
             }
 
             // Generate access and refresh tokens
-            String accessToken = jwtUtils.generateJwtToken(username);
-            String refreshToken = jwtUtils.generateRefreshToken(username);
+            String accessToken = jwtUtils.generateJwtToken(email);
+            String refreshToken = jwtUtils.generateRefreshToken(email);
 
             // Store refresh token securely (Redis-backed storage)
-            jwtUtils.storeRefreshToken(refreshToken, username);
+            jwtUtils.storeRefreshToken(refreshToken, email);
 
             // Calculate duration and record login time
             long duration = System.currentTimeMillis() - startTime;
@@ -138,7 +140,7 @@ public class UserService {
         customMetricService.recordLoginTime(duration);
         customMetricService.incrementLoginFailureCounter();
 
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
     }
 
 

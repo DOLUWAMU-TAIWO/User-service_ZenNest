@@ -1,9 +1,6 @@
 package dev.dolu.userservice.repository;
 
-import dev.dolu.userservice.models.AlumniStatus;
-import dev.dolu.userservice.models.Gender;
-import dev.dolu.userservice.models.Role;
-import dev.dolu.userservice.models.User;
+import dev.dolu.userservice.models.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
@@ -11,7 +8,6 @@ import java.util.UUID;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
-    // Custom query methods for production-grade functionality
 
     // Find by Email
     User findByEmail(String email);
@@ -19,39 +15,32 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // Find by Username
     User findByUsername(String username);
 
-    // Check existence by Username
+    // Check if Username exists
     boolean existsByUsername(String username);
 
-    // Check existence by Email
+    // Check if Email exists
     boolean existsByEmail(String email);
 
-    // Search by partial match on username or email (case-insensitive)
-    // Search by partial match on username, email, first name, or last name (case-insensitive)
-    List<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
-            String username, String email, String firstName, String lastName);
-    // Find users by role
-    List<User> findByRole(Role role);
-
-    // Find users by city
-    List<User> findByCity(String city);
-
-
-
-    // Find users by alumni status
-    List<User> findByAlumniStatus(AlumniStatus status);
-
-    // Find users by graduation year
-    List<User> findByGraduationYear(Integer graduationYear);
-
-    // Find users by gender
-    List<User> findByGender(Gender gender);
-
-    List<User> findByCountry(String country);
-
-    // Get all users sorted by creation date
-    List<User> findAllByOrderByCreatedAtDesc();
-
-    // Check existence by Phone Number
+    // Check if Phone Number exists
     boolean existsByPhoneNumber(String phoneNumber);
 
+    // Search by partial match across fields (for admin use)
+    List<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+            String username, String email, String firstName, String lastName
+    );
+
+    // Filter by Role
+    List<User> findByRole(Role role);
+
+    // Filter by Auth Provider
+    List<User> findByAuthProvider(AuthProvider authProvider);
+
+    // Filter by City
+    List<User> findByCity(String city);
+
+    // Filter by Country
+    List<User> findByCountry(String country);
+
+    // Sort all users by latest created
+    List<User> findAllByOrderByCreatedAtDesc();
 }

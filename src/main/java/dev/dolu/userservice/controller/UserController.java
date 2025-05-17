@@ -45,8 +45,8 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            logger.info("Login attempt for user: {}", loginRequest.getUsername());
-            Map<String, String> tokens = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
+            logger.info("Login attempt for email: {}", loginRequest.getEmail());
+            Map<String, String> tokens = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
             return new ResponseEntity<>(tokens, HttpStatus.OK);
         } catch (ResponseStatusException e) {
             logger.warn("Login failed: {}", e.getReason());
@@ -84,26 +84,15 @@ public class UserController {
     @PostMapping("/refresh-token")
     public ResponseEntity<?> refreshToken(HttpServletRequest request, @RequestBody Map<String, String> refreshTokenRequest) {
         String refreshToken = refreshTokenRequest.get("refreshToken");
-        String username = jwtUtils.getUsernameFromJwtToken(refreshToken);
-        logger.info("Refresh token requested by user: {}", username);
-        if (username != null && jwtUtils.validateRefreshToken(refreshToken) && jwtUtils.isRefreshTokenValid(username, refreshToken)) {
-            String newAccessToken = jwtUtils.generateJwtToken(username);
-            Map<String, String> response = new HashMap<>();
-            response.put("accessToken", newAccessToken);
-            return ResponseEntity.ok(response);
+        String email = jwtUtils.getUsernameFromJwtToken(refreshToken);
+        logger.info("Refresh token requested by user: {}", email);
+        if (email != null && jwtUtils.validateRefreshToken(refreshToken) && jwtUtils.isRefreshTokenValid(email, refreshToken)) {
+            String newAccessToken = jwtUtils.generateJwtToken(email);
+            return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
         } else {
-            logger.warn("Invalid or expired refresh token for user: {}", username);
+            logger.warn("Invalid or expired refresh token for email: {}", email);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token.");
         }
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-                errors.put(error.getField(), error.getDefaultMessage()));
-        logger.warn("Validation errors: {}", errors);
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
     @GetMapping("/verify")
@@ -137,15 +126,15 @@ public class UserController {
     @GetMapping("/user-details")
     public ResponseEntity<?> getUserDetails(HttpServletRequest request) {
         String jwt = request.getHeader("Authorization").substring(7);
-        String username = jwtUtils.getUsernameFromJwtToken(jwt);
-        logger.info("Fetching user details for: {}", username);
-        User user = userRepository.findByUsername(username);
+        String email = jwtUtils.getUsernameFromJwtToken(jwt);
+        logger.info("Fetching user details for email: {}", email);
+        User user = userRepository.findByEmail(email);
         if (user != null) {
-            Map<String, Object> userInfo = new HashMap<>();
-            userInfo.put("username", user.getUsername());
-            userInfo.put("email", user.getEmail());
-            userInfo.put("role", user.getRole());
-            return ResponseEntity.ok(userInfo);
+            return ResponseEntity.ok(Map.of(
+                    "email", user.getEmail(),
+                    "role", user.getRole(),
+                    "id", user.getId()
+            ));
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
@@ -157,24 +146,11 @@ public class UserController {
         if (user.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
         }
-        User userDetails = user.get();
-        Map<String, Object> response = Map.of(
-                "id", userDetails.getId(),
-                "username", userDetails.getUsername(),
-                "email", userDetails.getEmail()
-        );
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/validate-username")
-    public ResponseEntity<?> validateUsername(@RequestParam String username) {
-        logger.info("Validating username: {}", username);
-        Optional<User> user = Optional.ofNullable(userRepository.findByUsername(username));
-        if (user.isPresent()) {
-            return ResponseEntity.ok("User is valid");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        }
+        User u = user.get();
+        return ResponseEntity.ok(Map.of(
+                "id", u.getId(),
+                "email", u.getEmail()
+        ));
     }
 
     @GetMapping("/all")
@@ -193,14 +169,12 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping("/get-user")
-    public ResponseEntity<?> getUserByUsername(@RequestParam String username) {
-        logger.info("Fetching user by username: {}", username);
-        Optional<User> user = Optional.ofNullable(userRepository.findByUsername(username));
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        }
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage()));
+        logger.warn("Validation errors: {}", errors);
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 }

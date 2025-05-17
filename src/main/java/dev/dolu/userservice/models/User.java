@@ -7,107 +7,58 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.UUID;
 
 @Entity
-@Table(name = "users", uniqueConstraints = {@UniqueConstraint(columnNames = "email")})
+@Table(name = "qorelabs_users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email"),
+        @UniqueConstraint(columnNames = "username"),
+        @UniqueConstraint(columnNames = "phoneNumber")
+})
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @NotBlank(message = "First name is required")
-    @Column(nullable = false)
     private String firstName;
-
-    @NotBlank(message = "Last name is required")
-    @Column(nullable = false)
     private String lastName;
-
-    @NotBlank(message = "Username is required")
-    @Column(nullable = false, unique = true)
     private String username;
 
-    @NotBlank(message = "Phone number is required")
-    @Column(nullable = false, unique = true)
-    private String phoneNumber;
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @NotBlank
+    @Email
     @Column(nullable = false, unique = true)
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password should be at least 8 characters")
+    private String phoneNumber;
+
+    @NotBlank
+    @Size(min = 8)
     @Column(nullable = false)
     private String password;
 
-    private LocalDate dateOfBirth;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.TENANT;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Gender gender;
+    private AuthProvider authProvider = AuthProvider.LOCAL;
 
-    @Column(nullable = true)
-    private String profession;
+    private boolean verified = false;
+    private boolean enabled = true;
+    private String profileImage;
 
-    @Column(nullable = true)
     private String city;
-
-    @Column(nullable = true)
     private String country;
 
-    @Column(nullable = true)
-    private Integer graduationYear;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
-    private AlumniStatus alumniStatus = AlumniStatus.ACTIVE;
-
-    @Column(nullable = true)
-    private String chapter;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role = Role.USER;
-
-    @Column(nullable = false)
-    private boolean enabled = false;
+    private LocalDate dateOfBirth;
+    private String profession;
+    private String activePlan;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Social media links as a list of SocialMediaLink entities
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "user_id")
-    private List<SocialMediaLink> socialMediaLinks = new ArrayList<>();
-
-    // No-argument constructor
-    public User() {}
-
-    // Full constructor
-    public User(String firstName, String lastName, String username, String phoneNumber, String email, String password,
-                Gender gender, String profession, String city, String country, Integer graduationYear, String chapter, Role role) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.username = username;
-        this.phoneNumber = phoneNumber;
-        this.email = email;
-        this.password = password;
-        this.gender = gender;
-        this.profession = profession;
-        this.city = city;
-        this.country = country;
-        this.graduationYear = graduationYear;
-        this.chapter = chapter;
-        this.role = role;
-        this.alumniStatus = AlumniStatus.ACTIVE;
-        this.enabled = false;
-        this.socialMediaLinks = new ArrayList<>();
-    }
-
-    // Lifecycle methods
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -117,6 +68,8 @@ public class User {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    // Getters and Setters (same as before)
 
     // Getters and Setters
 
@@ -152,20 +105,20 @@ public class User {
         this.username = username;
     }
 
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
-
     public String getEmail() {
         return email;
     }
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getPassword() {
@@ -176,28 +129,44 @@ public class User {
         this.password = password;
     }
 
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
+    public Role getRole() {
+        return role;
     }
 
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
-    public Gender getGender() {
-        return gender;
+    public AuthProvider getAuthProvider() {
+        return authProvider;
     }
 
-    public void setGender(Gender gender) {
-        this.gender = gender;
+    public void setAuthProvider(AuthProvider authProvider) {
+        this.authProvider = authProvider;
     }
 
-    public String getProfession() {
-        return profession;
+    public boolean isVerified() {
+        return verified;
     }
 
-    public void setProfession(String profession) {
-        this.profession = profession;
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 
     public String getCity() {
@@ -216,48 +185,28 @@ public class User {
         this.country = country;
     }
 
-    public Integer getGraduationYear() {
-        return graduationYear;
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
     }
 
-    public void setGraduationYear(Integer graduationYear) {
-        this.graduationYear = graduationYear;
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
-    public AlumniStatus getAlumniStatus() {
-        return alumniStatus;
+    public String getProfession() {
+        return profession;
     }
 
-    public void setAlumniStatus(AlumniStatus alumniStatus) {
-        this.alumniStatus = alumniStatus;
+    public void setProfession(String profession) {
+        this.profession = profession;
     }
 
-    public String getChapter() {
-        return chapter;
+    public String getActivePlan() {
+        return activePlan;
     }
 
-    public void setChapter(String chapter) {
-        this.chapter = chapter;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public boolean getEnabled() {
-        return enabled;
-    }
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+    public void setActivePlan(String activePlan) {
+        this.activePlan = activePlan;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -274,13 +223,5 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public List<SocialMediaLink> getSocialMediaLinks() {
-        return socialMediaLinks;
-    }
-
-    public void setSocialMediaLinks(List<SocialMediaLink> socialMediaLinks) {
-        this.socialMediaLinks = socialMediaLinks;
     }
 }
