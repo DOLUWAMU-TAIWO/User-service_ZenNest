@@ -9,10 +9,10 @@ enum Role {
 
 type User {
     id: ID!
-    firstName: String!
-    lastName: String!
-    username: String!
-    phoneNumber: String!
+    firstName: String
+    lastName: String
+    username: String
+    phoneNumber: String
     email: String!
     password: String!
     profession: String
@@ -43,28 +43,28 @@ type Query {
 
 type Mutation {
     createUser(
-        firstName: String!
-        lastName: String!
-        username: String!
-        phoneNumber: String!
         email: String!
         password: String!
+        role: Role!
+        username: String
+        firstName: String
+        lastName: String
+        phoneNumber: String
         dateOfBirth: String
         profession: String
         city: String
         country: String
-        role: Role!
         enabled: Boolean
     ): User
 
     updateUser(
         id: ID!
-        firstName: String
-        lastName: String
-        username: String
-        phoneNumber: String
         email: String
         password: String
+        username: String
+        firstName: String
+        lastName: String
+        phoneNumber: String
         dateOfBirth: String
         profession: String
         city: String
