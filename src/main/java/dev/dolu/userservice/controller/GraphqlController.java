@@ -3,8 +3,10 @@ package dev.dolu.userservice.controller;
 import dev.dolu.userservice.models.Role;
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.repository.UserRepository;
+import dev.dolu.userservice.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -25,10 +27,14 @@ public class GraphqlController {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlController.class);
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final UserService userService;
 
-    public GraphqlController(UserRepository userRepository) {
+    @Autowired
+    public GraphqlController(UserRepository userRepository, UserService userService) {
         this.userRepository = userRepository;
+        this.userService = userService;
     }
+
 
     @QueryMapping
     public User getUserById(@Argument UUID id) {
@@ -87,26 +93,22 @@ public class GraphqlController {
                            @Argument String dateOfBirth, @Argument String profession,
                            @Argument String city, @Argument String country, @Argument Role role) {
         try {
-            if (userRepository.existsByUsername(username)) throw new IllegalArgumentException("Username exists.");
-            if (userRepository.existsByEmail(email)) throw new IllegalArgumentException("Email exists.");
-            if (userRepository.existsByPhoneNumber(phoneNumber)) throw new IllegalArgumentException("Phone number exists.");
-
             User user = new User();
             user.setFirstName(firstName);
             user.setLastName(lastName);
-            user.setUsername(username);
+            user.setUsername((username == null || username.isBlank()) ? null : username);
             user.setPhoneNumber(phoneNumber);
             user.setEmail(email);
-            user.setPassword(passwordEncoder.encode(password));
+            user.setPassword(password); // let service encode
             user.setProfession(profession);
             user.setCity(city);
             user.setCountry(country);
             user.setRole(role != null ? role : Role.USER);
-            user.setEnabled(true);
+            user.setEnabled(false); // let service handle verification
 
             if (dateOfBirth != null) user.setDateOfBirth(LocalDate.parse(dateOfBirth));
 
-            return userRepository.save(user);
+            return (User) userService.registerUser(user).get("user");
         } catch (Exception e) {
             logger.error("User creation failed: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);

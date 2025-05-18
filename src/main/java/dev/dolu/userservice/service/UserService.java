@@ -49,43 +49,45 @@ public class UserService {
     public Map<String, Object> registerUser(User user) {
         Map<String, Object> response = new HashMap<>();
 
-        // Validate for duplicate username
-        // Validate for duplicate username if present
+        // Normalize username: treat blank as null
+        if (user.getUsername() != null && user.getUsername().isBlank()) {
+            user.setUsername(null);
+        }
+
+        // Check for existing username if one is provided
         if (user.getUsername() != null && userRepository.existsByUsername(user.getUsername())) {
             logger.warn("Registration failed: Username '{}' is already taken.", user.getUsername());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
         }
 
-        // Validate for duplicate email
+        // Check for existing email
         if (userRepository.existsByEmail(user.getEmail())) {
             logger.warn("Registration failed: Email '{}' is already in use.", user.getEmail());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
         }
 
-        // Start timing registration process
+        // Start timing
         long startTime = System.currentTimeMillis();
 
-        // Process user details
+        // Hash password and mark account as disabled (pending verification)
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setEnabled(false);
 
-        // Save user to repository
+        // Save user
         User savedUser = userRepository.save(user);
         response.put("user", savedUser);
         response.put("message", "User registered successfully. Please verify your email.");
 
-        // Send verification email and ensure it was sent successfully
+        // Send verification email
         boolean emailSent = verificationService.createAndSendVerificationToken(savedUser);
         if (!emailSent) {
-            logger.error("Failed to send verification email to '{}'.", user.getEmail());
+            logger.error("Verification email failed for '{}'", user.getEmail());
             throw new EmailSendingFailedException("User registered but failed to send verification email. Please try again or use /reverify.");
         }
 
-        // Calculate the duration and record the registration time metric
+        // Metrics
         long duration = System.currentTimeMillis() - startTime;
         customMetricService.recordUserRegistrationTime(duration);
-
-        // Increment the user registration count metric only after email is sent
         customMetricService.incrementUserRegistrationCounter();
 
         return response;
