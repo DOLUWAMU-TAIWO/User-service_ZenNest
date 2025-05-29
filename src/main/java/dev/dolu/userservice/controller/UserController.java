@@ -133,7 +133,11 @@ public class UserController {
             return ResponseEntity.ok(Map.of(
                     "email", user.getEmail(),
                     "role", user.getRole(),
-                    "id", user.getId()
+                    "id", user.getId(),
+                    "firstName", user.getFirstName(),
+                    "lastName", user.getLastName(),
+                    "username", user.getUsername(),
+                    "profileImage", user.getProfileImage()
             ));
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");

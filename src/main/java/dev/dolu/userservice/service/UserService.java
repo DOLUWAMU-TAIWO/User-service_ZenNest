@@ -101,6 +101,8 @@ public class UserService {
      * @return A map containing the access and refresh tokens.
      * @throws MessagingException If an error occurs while resending the verification token.
      */
+
+    //TODO BLOCK PASSWORD LOGIN FOR AUTH USERS
     public Map<String, String> login(String email, String password) throws MessagingException {
         long startTime = System.currentTimeMillis();
 
