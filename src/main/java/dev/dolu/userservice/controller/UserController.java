@@ -131,23 +131,23 @@ public class UserController {
         logger.info("Fetching user details for email: {}", email);
         User user = userRepository.findByEmail(email);
         if (user != null) {
-            return ResponseEntity.ok(Map.ofEntries(
-                    Map.entry("id", user.getId()),
-                    Map.entry("email", user.getEmail()),
-                    Map.entry("role", user.getRole()),
-                    Map.entry("firstName", user.getFirstName()),
-                    Map.entry("lastName", user.getLastName()),
-                    Map.entry("username", user.getUsername()),
-                    Map.entry("profileImage", user.getProfileImage()),
-                    Map.entry("phoneNumber", user.getPhoneNumber()),
-                    Map.entry("verified", user.isVerified()),
-                    Map.entry("enabled", user.isEnabled()),
-                    Map.entry("city", user.getCity()),
-                    Map.entry("country", user.getCountry()),
-                    Map.entry("dateOfBirth", user.getDateOfBirth()),
-                    Map.entry("activePlan", user.getActivePlan()),
-                    Map.entry("updatedAt", user.getUpdatedAt())
-            ));
+            Map<String, Object> userDetails = new HashMap<>();
+            userDetails.put("id", user.getId());
+            userDetails.put("email", user.getEmail());
+            userDetails.put("role", user.getRole());
+            userDetails.put("firstName", user.getFirstName());
+            userDetails.put("lastName", user.getLastName());
+            userDetails.put("username", user.getUsername());
+            userDetails.put("profileImage", user.getProfileImage());
+            userDetails.put("phoneNumber", user.getPhoneNumber());
+            userDetails.put("verified", user.isVerified());
+            userDetails.put("enabled", user.isEnabled());
+            userDetails.put("city", user.getCity());
+            userDetails.put("country", user.getCountry());
+            userDetails.put("dateOfBirth", user.getDateOfBirth());
+            userDetails.put("activePlan", user.getActivePlan());
+            userDetails.put("updatedAt", user.getUpdatedAt());
+            return ResponseEntity.ok(userDetails);
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
@@ -191,4 +191,6 @@ public class UserController {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 }
+
+
 
