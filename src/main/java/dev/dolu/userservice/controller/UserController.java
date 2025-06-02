@@ -123,6 +123,7 @@ public class UserController {
         return ResponseEntity.badRequest().body("User not found or already verified.");
     }
 
+
     @GetMapping("/user-details")
     public ResponseEntity<?> getUserDetails(HttpServletRequest request) {
         String jwt = request.getHeader("Authorization").substring(7);
@@ -130,14 +131,22 @@ public class UserController {
         logger.info("Fetching user details for email: {}", email);
         User user = userRepository.findByEmail(email);
         if (user != null) {
-            return ResponseEntity.ok(Map.of(
-                    "email", user.getEmail(),
-                    "role", user.getRole(),
-                    "id", user.getId(),
-                    "firstName", user.getFirstName(),
-                    "lastName", user.getLastName(),
-                    "username", user.getUsername(),
-                    "profileImage", user.getProfileImage()
+            return ResponseEntity.ok(Map.ofEntries(
+                    Map.entry("id", user.getId()),
+                    Map.entry("email", user.getEmail()),
+                    Map.entry("role", user.getRole()),
+                    Map.entry("firstName", user.getFirstName()),
+                    Map.entry("lastName", user.getLastName()),
+                    Map.entry("username", user.getUsername()),
+                    Map.entry("profileImage", user.getProfileImage()),
+                    Map.entry("phoneNumber", user.getPhoneNumber()),
+                    Map.entry("verified", user.isVerified()),
+                    Map.entry("enabled", user.isEnabled()),
+                    Map.entry("city", user.getCity()),
+                    Map.entry("country", user.getCountry()),
+                    Map.entry("dateOfBirth", user.getDateOfBirth()),
+                    Map.entry("activePlan", user.getActivePlan()),
+                    Map.entry("updatedAt", user.getUpdatedAt())
             ));
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
@@ -182,3 +191,4 @@ public class UserController {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 }
+
