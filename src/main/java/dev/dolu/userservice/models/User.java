@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -58,6 +59,17 @@ public class User {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @ElementCollection
+    @CollectionTable(name = "user_favourites", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "listing_id")
+    private List<UUID> favourites;
+
+    @Enumerated(EnumType.STRING)
+    private UserIntention intention;
+
+    private String profileDescription;
+    private String profilePicture;
 
     @PrePersist
     protected void onCreate() {
@@ -223,5 +235,37 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<UUID> getFavourites() {
+        return favourites;
+    }
+
+    public void setFavourites(List<UUID> favourites) {
+        this.favourites = favourites;
+    }
+
+    public UserIntention getIntention() {
+        return intention;
+    }
+
+    public void setIntention(UserIntention intention) {
+        this.intention = intention;
+    }
+
+    public String getProfileDescription() {
+        return profileDescription;
+    }
+
+    public void setProfileDescription(String profileDescription) {
+        this.profileDescription = profileDescription;
+    }
+
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
     }
 }

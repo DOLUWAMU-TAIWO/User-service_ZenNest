@@ -146,6 +146,10 @@ public class UserController {
             userDetails.put("country", user.getCountry());
             userDetails.put("dateOfBirth", user.getDateOfBirth());
             userDetails.put("activePlan", user.getActivePlan());
+            userDetails.put("favourites", user.getFavourites());
+            userDetails.put("intention", user.getIntention());
+            userDetails.put("profileDescription", user.getProfileDescription());
+            userDetails.put("profilePicture", user.getProfilePicture());
             userDetails.put("updatedAt", user.getUpdatedAt());
             return ResponseEntity.ok(userDetails);
         }
