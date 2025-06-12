@@ -1,8 +1,6 @@
 package dev.dolu.userservice.controller;
 
-import dev.dolu.userservice.models.LoginRequest;
-import dev.dolu.userservice.models.User;
-import dev.dolu.userservice.models.UserDTO;
+import dev.dolu.userservice.models.*;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.service.UserService;
 import dev.dolu.userservice.service.VerificationService;
@@ -155,6 +153,15 @@ public class UserController {
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
+    @PostMapping("/register-zenest")
+    public ResponseEntity<Map<String,Object>> registerZenest(@Valid @RequestBody User user) {
+        logger.info("Registering user from Zennest: {}", user.getEmail());
+        Map<String,Object> resp = userService.registerUserWithZenest(user);
+        return new ResponseEntity<>(resp,
+                resp.containsKey("emailStatus") ? HttpStatus.ACCEPTED : HttpStatus.CREATED);
+    }
+
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable UUID id) {
@@ -185,6 +192,23 @@ public class UserController {
         List<User> users = userRepository.findAllById(userIds);
         return ResponseEntity.ok(users);
     }
+    @PatchMapping("/{id}/profile-complete")
+    public ResponseEntity<User> markProfileComplete(@PathVariable UUID id) {
+        return ResponseEntity.ok(userService.markProfileComplete(id));
+    }
+
+    @PatchMapping("/{id}/onboarding-complete")
+    public ResponseEntity<User> markOnboardingComplete(@PathVariable UUID id) {
+        return ResponseEntity.ok(userService.markOnboardingComplete(id));
+    }
+
+    @PatchMapping("/{id}/subscription")
+    public ResponseEntity<User> updateSubscription(@PathVariable UUID id,
+                                                   @RequestBody Map<String,Object> req) {
+        String plan = (String) req.get("plan");
+        Boolean active = (Boolean) req.get("active");
+        return ResponseEntity.ok(userService.updateSubscription(id, plan, active));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -194,7 +218,46 @@ public class UserController {
         logger.warn("Validation errors: {}", errors);
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
+
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        logger.info("Password reset requested for email: {}", email);
+        userService.requestPasswordReset(email);
+        // Always return success to avoid revealing user existence
+        return ResponseEntity.ok(Map.of("message", "If the email exists, a reset code has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        String newPassword = request.get("newPassword");
+        logger.info("Password reset attempt for email: {}", email);
+        userService.resetPassword(email, code, newPassword);
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully."));
+    }
+
+    @PostMapping("/resend-zenest-verification")
+    public ResponseEntity<Map<String, String>> resendZenestVerification(@Valid @RequestBody ResendZenestRequest request) {
+        logger.info("Resending Zenest verification code for email: {}", request.getEmail());
+        verificationService.resendZenestVerificationCode(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "Verification code resent successfully"));
+    }
+
+    @PostMapping("/verify-zenest")
+    public ResponseEntity<Map<String, String>> verifyZenest(@Valid @RequestBody VerifyZenestRequest request) {
+        logger.info("Verifying Zenest code for email: {}", request.getEmail());
+        verificationService.verifyZenestCode(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(Map.of("message", "User verified successfully"));
+    }
+
+
+
+
+
 }
+
 
 
 

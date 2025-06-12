@@ -13,11 +13,15 @@ import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException; // Import MessagingException
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 public class VerificationService {
@@ -137,6 +141,66 @@ public class VerificationService {
         emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
     }
 
+    @Transactional
+    public boolean sendZenestVerificationCode(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new ResponseStatusException(NOT_FOUND, "User not found");
+        }
+        // Clear previous codes
+        verificationTokenRepository.deleteByUser(user);
+        String code = TokenGenerator.generateToken(6);
+        LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(5);
+        VerificationToken token = new VerificationToken(code, user, expiryDate);
+        verificationTokenRepository.save(token);
+        boolean sent = emailService.sendZenestVerificationEmail(email, code);
+        if (!sent) {
+            throw new ResponseStatusException(INTERNAL_SERVER_ERROR, "Failed to send verification email");
+        }
+        return true;
+    }
 
+    public boolean verifyZenestCode(String email, String code) {
+        Optional<VerificationToken> opt = verificationTokenRepository.findByToken(code);
+        if (opt.isEmpty()) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid verification code");
+        }
+        VerificationToken vt = opt.get();
+        if (!vt.getUser().getEmail().equals(email)) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Code does not match user");
+        }
+        if (vt.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Verification code expired");
+        }
+        User user = vt.getUser();
+        user.setEnabled(true);
+        user.setVerified(true);
+        userRepository.save(user);
+        verificationTokenRepository.delete(vt);
+        customMetricService.incrementUserActivationSuccessCounter();
+        return true;
+    }
+
+    @Transactional
+    public boolean resendZenestVerificationCode(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new ResponseStatusException(NOT_FOUND, "User not found");
+        }
+        if (user.isEnabled()) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "User already verified");
+        }
+        // Clear previous codes
+        verificationTokenRepository.deleteByUser(user);
+        String code = TokenGenerator.generateToken(6);
+        LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(5);
+        VerificationToken token = new VerificationToken(code, user, expiryDate);
+        verificationTokenRepository.save(token);
+        boolean sent = emailService.sendZenestResendVerificationEmail(email, code);
+        if (!sent) {
+            throw new ResponseStatusException(INTERNAL_SERVER_ERROR, "Failed to send verification email");
+        }
+        return true;
+    }
 
 }

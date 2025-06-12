@@ -19,6 +19,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -154,8 +155,12 @@ class RegisterEndpointTest extends BaseIntegrationTest {
         token.setExpiryDate(LocalDateTime.now().plusHours(1));
         verificationTokenRepository.save(token);
 
-        VerificationToken fetchedToken = verificationTokenRepository.findByUser(user);
-        assertThat(fetchedToken).isNotNull();
+        //
+
+
+        Optional<VerificationToken> fetchedOpt = verificationTokenRepository.findByUser(user);
+        assertThat(fetchedOpt).isPresent();
+        VerificationToken fetchedToken = fetchedOpt.get();
     }
 //    @DirtiesContext
 //

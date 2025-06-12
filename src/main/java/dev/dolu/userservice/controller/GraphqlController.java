@@ -2,6 +2,7 @@ package dev.dolu.userservice.controller;
 
 import dev.dolu.userservice.models.Role;
 import dev.dolu.userservice.models.User;
+import dev.dolu.userservice.models.UserIntention;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.service.UserService;
 import org.slf4j.Logger;
@@ -91,7 +92,9 @@ public class GraphqlController {
     public User createUser(@Argument String firstName, @Argument String lastName, @Argument String username,
                            @Argument String phoneNumber, @Argument String email, @Argument String password,
                            @Argument String dateOfBirth, @Argument String profession,
-                           @Argument String city, @Argument String country, @Argument Role role) {
+                           @Argument String city, @Argument String country, @Argument Role role,
+                           @Argument UserIntention intention, @Argument String profileDescription,
+                           @Argument String profilePicture, @Argument List<UUID> favourites) {
         try {
             User user = new User();
             user.setFirstName(firstName);
@@ -105,6 +108,11 @@ public class GraphqlController {
             user.setCountry(country);
             user.setRole(role != null ? role : Role.USER);
             user.setEnabled(false); // let service handle verification
+
+            if (intention != null) user.setIntention(intention);
+            if (profileDescription != null) user.setProfileDescription(profileDescription);
+            if (profilePicture != null) user.setProfilePicture(profilePicture);
+            if (favourites != null) user.setFavourites(favourites);
 
             if (dateOfBirth != null) user.setDateOfBirth(LocalDate.parse(dateOfBirth));
 
@@ -120,7 +128,13 @@ public class GraphqlController {
                            @Argument String username, @Argument String phoneNumber, @Argument String email,
                            @Argument String password, @Argument String dateOfBirth,
                            @Argument String profession, @Argument String city, @Argument String country,
-                           @Argument Role role) {
+                           @Argument Role role,
+                           @Argument Boolean profileCompleted,
+                           @Argument Boolean onboardingCompleted,
+                           @Argument String subscriptionPlan,
+                           @Argument Boolean subscriptionActive,
+                           @Argument UserIntention intention, @Argument String profileDescription,
+                           @Argument String profilePicture, @Argument List<UUID> favourites) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
@@ -135,6 +149,14 @@ public class GraphqlController {
         if (city != null) user.setCity(city);
         if (country != null) user.setCountry(country);
         if (role != null) user.setRole(role);
+        if (profileCompleted != null) user.setProfileCompleted(profileCompleted);
+        if (onboardingCompleted != null) user.setOnboardingCompleted(onboardingCompleted);
+        if (subscriptionPlan != null) user.setSubscriptionPlan(subscriptionPlan);
+        if (subscriptionActive != null) user.setSubscriptionActive(subscriptionActive);
+        if (intention != null) user.setIntention(intention);
+        if (profileDescription != null) user.setProfileDescription(profileDescription);
+        if (profilePicture != null) user.setProfilePicture(profilePicture);
+        if (favourites != null) user.setFavourites(favourites);
 
         return userRepository.save(user);
     }
@@ -146,5 +168,20 @@ public class GraphqlController {
         }
         userRepository.deleteById(id);
         return true;
+    }
+
+    @MutationMapping
+    public User markProfileComplete(@Argument UUID id) {
+        return userService.markProfileComplete(id);
+    }
+
+    @MutationMapping
+    public User markOnboardingComplete(@Argument UUID id) {
+        return userService.markOnboardingComplete(id);
+    }
+
+    @MutationMapping
+    public User updateSubscription(@Argument UUID id, @Argument String plan, @Argument Boolean active) {
+        return userService.updateSubscription(id, plan, active);
     }
 }

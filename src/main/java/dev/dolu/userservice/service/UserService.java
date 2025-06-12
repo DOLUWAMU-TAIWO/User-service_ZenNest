@@ -2,7 +2,9 @@ package dev.dolu.userservice.service;
 
 import dev.dolu.userservice.metrics.CustomMetricService;
 import dev.dolu.userservice.models.User;
+import dev.dolu.userservice.models.VerificationToken;
 import dev.dolu.userservice.repository.UserRepository;
+import dev.dolu.userservice.repository.VerificationTokenRepository;
 import dev.dolu.userservice.utils.JwtUtils;
 import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
@@ -11,12 +13,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 public class UserService {
@@ -27,15 +35,21 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtUtils jwtUtils;
     private final VerificationService verificationService;
+    private final VerificationTokenRepository verificationTokenRepository;
+    private final EmailService emailService;
+
+
 
     private final CustomMetricService customMetricService;
 
     @Autowired
-    public UserService(UserRepository userRepository, JwtUtils jwtUtils, VerificationService verificationService, CustomMetricService customMetricService) {
+    public UserService(UserRepository userRepository, JwtUtils jwtUtils, VerificationService verificationService, CustomMetricService customMetricService, VerificationTokenRepository verificationTokenRepository, EmailService emailService) {
         this.passwordEncoder = new BCryptPasswordEncoder();
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.verificationService = verificationService;
+        this.verificationTokenRepository = verificationTokenRepository;
+        this.emailService = emailService;
         this.customMetricService = customMetricService;
     }
 
@@ -133,6 +147,11 @@ public class UserService {
 
             // Increment success counter and return tokens
             customMetricService.incrementLoginSuccessCounter();
+
+            // Record last login timestamp
+            user.setLastLogin(LocalDateTime.now());
+            userRepository.save(user);
+
             Map<String, String> tokens = new HashMap<>();
             tokens.put("accessToken", accessToken);
             tokens.put("refreshToken", refreshToken);
@@ -157,4 +176,107 @@ public class UserService {
     public User findUserById(UUID userId) {
         return userRepository.findById(userId).orElse(null);
     }
+
+    // New helper methods
+    public void recordLogin(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    public User markProfileComplete(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setProfileCompleted(true);
+        return userRepository.save(user);
+    }
+
+    public User markOnboardingComplete(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setOnboardingCompleted(true);
+        return userRepository.save(user);
+    }
+
+    public User updateSubscription(UUID userId, String plan, boolean active) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setSubscriptionPlan(plan);
+        user.setSubscriptionActive(active);
+        return userRepository.save(user);
+    }
+
+    /**
+     * Registers a new user and sends a Zenest verification code.
+     */
+    @Transactional
+    public Map<String, Object> registerUserWithZenest(User user) {
+        // Normalize username
+        if (user.getUsername() != null && user.getUsername().isBlank()) {
+            user.setUsername(null);
+        }
+        // Check for existing username
+        if (user.getUsername() != null && userRepository.existsByUsername(user.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
+        }
+        // Check for existing email
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+        }
+        // Hash password and disable until verified
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setEnabled(false);
+        User savedUser = userRepository.save(user);
+        // Send Zenest code
+        boolean sent = verificationService.sendZenestVerificationCode(savedUser.getEmail());
+        if (!sent) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification code");
+        }
+        // Prepare response
+        Map<String, Object> response = new HashMap<>();
+        response.put("user", savedUser);
+        response.put("emailStatus", "code_sent");
+        response.put("message", "User registered successfully. Please verify using the code sent to your email.");
+        // Metrics
+        customMetricService.incrementUserRegistrationCounter();
+        return response;
+    }
+
+    @Transactional
+    public void requestPasswordReset(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) return; // Optionally, do not reveal user existence
+
+        verificationTokenRepository.deleteByUser(user);
+        String code = VerificationService.TokenGenerator.generateToken(6);
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(10);
+        VerificationToken token = new VerificationToken(code, user, expiry);
+        verificationTokenRepository.save(token);
+        emailService.sendPasswordResetEmail(email, code);
+
+    }
+    public void resetPassword(String email, String code, String newPassword) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) throw new ResponseStatusException(NOT_FOUND, "User not found");
+
+        Optional<VerificationToken> opt = verificationTokenRepository.findByToken(code);
+        if (opt.isEmpty() || !opt.get().getUser().getEmail().equals(email) ||
+                opt.get().getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(BAD_REQUEST, "Invalid or expired code");
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "New password cannot be the same as the current password.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        verificationTokenRepository.delete(opt.get());
+    }
+
+
+
+
+
 }

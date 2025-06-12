@@ -82,6 +82,87 @@ public class EmailService {
         return sendEmail(to, subject, content);
     }
 
+    // 🟡 Function 4: Send Zenest Verification Code Email
+    public boolean sendZenestVerificationEmail(String to, String code) {
+        String subject = "Welcome to Zennest – Your Verification Code";
+        String content = "<!DOCTYPE html>" +
+                "<html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<title>Welcome to Zennest</title>" +
+                "<style>body{font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;}" +
+                ".container{max-width:600px;margin:20px auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}" +
+                ".header{text-align:center;font-size:24px;font-weight:bold;color:#333;padding-bottom:10px;}" +
+                ".content{font-size:16px;color:#555;line-height:1.5;}" +
+                ".code{display:block;margin:20px auto;font-size:32px;font-weight:bold;color:#007bff;text-align:center;}" +
+                ".footer{text-align:center;font-size:12px;color:#888;padding-top:15px;}" +
+                "</style></head><body><div class='container'>" +
+                "<div class='header'>Welcome to Zennest!</div>" +
+                "<div class='content'>" +
+                "<p>Hi there 👋,</p>" +
+                "<p>We’re thrilled to have you aboard. To complete your registration and start renting with peace of mind, please use the verification code below:</p>" +
+                "<span class='code'>" + code + "</span>" +
+                "<p>This code expires in 5 minutes. If you did not request this, please ignore this email.</p>" +
+                "<p class='footer'>&copy; 2025 Zennest. All rights reserved.</p>" +
+                "</div></body></html>";
+        return sendEmail(to, subject, content);
+    }
+
+    // 🟣 Function 5: Send Zenest Resend Verification Code Email
+    public boolean sendZenestResendVerificationEmail(String to, String code) {
+        String subject = "Your New Zennest Verification Code";
+        String content = "<!DOCTYPE html>" +
+                "<html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<title>Your New Zennest Code</title>" +
+                "<style>body{font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;}" +
+                ".container{max-width:600px;margin:20px auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}" +
+                ".header{text-align:center;font-size:24px;font-weight:bold;color:#333;padding-bottom:10px;}" +
+                ".content{font-size:16px;color:#555;line-height:1.5;}" +
+                ".code{display:block;margin:20px auto;font-size:32px;font-weight:bold;color:#007bff;text-align:center;}" +
+                ".footer{text-align:center;font-size:12px;color:#888;padding-top:15px;}" +
+                "</style></head><body><div class='container'>" +
+                "<div class='header'>Your New Verification Code</div>" +
+                "<div class='content'>" +
+                "<p>Hi there 👋,</p>" +
+                "<p>This is your new verification code for Zennest. Enter it in the app to complete your verification:</p>" +
+                "<span class='code'>" + code + "</span>" +
+                "<p>This code expires in 5 minutes. If you did not request a new code, please ignore this email.</p>" +
+                "<p class='footer'>&copy; 2025 Zennest. All rights reserved.</p>" +
+                "</div></body></html>";
+        return sendEmail(to, subject, content);
+    }
+
+    public boolean sendPasswordResetEmail(String to, String code) {
+        String subject = "Zennest Password Reset Code";
+        String content = "<!DOCTYPE html>" +
+                "<html lang='en'>" +
+                "<head>" +
+                "    <meta charset='UTF-8'>" +
+                "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "    <title>Password Reset</title>" +
+                "    <style>" +
+                "        .container { max-width: 600px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }" +
+                "        .header { text-align: center; font-size: 24px; font-weight: bold; color: #333; padding-bottom: 10px; }" +
+                "        .footer { text-align: center; font-size: 12px; color: #888; padding-top: 15px; }" +
+                "        .content { font-size: 16px; color: #555; line-height: 1.5; text-align: center; }" +
+                "        .code { display: block; margin: 20px auto; font-size: 32px; font-weight: bold; color: #007bff; text-align: center; }" +
+                "    </style>" +
+                "</head>" +
+                "<body>" +
+                "    <div class='container'>" +
+                "        <div class='header'>Zennest Password Reset</div>" +
+                "        <div class='content'>" +
+                "            <p>We received a request to reset your Zennest password.</p>" +
+                "            <p>Use the code below to reset your password:</p>" +
+                "            <span class='code'>" + code + "</span>" +
+                "            <p>This code expires in 5 minutes. If you did not request a password reset, please ignore this email.</p>" +
+                "        </div>" +
+                "        <div class='footer'>&copy; 2025 Zennest. All rights reserved.</div>" +
+                "    </div>" +
+                "</body>" +
+                "</html>";
+        return sendEmail(to, subject, content);
+    }
+
+
     // 🚀 Function 3: Generic Email Sending Function (Used Internally)
     private boolean sendEmail(String to, String subject, String content) {
         long startTime = System.currentTimeMillis();

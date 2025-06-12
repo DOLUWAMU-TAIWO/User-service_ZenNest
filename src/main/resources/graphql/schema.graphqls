@@ -7,6 +7,13 @@ enum Role {
     LANDLORD
 }
 
+enum UserIntention {
+    BUY
+    SELL
+    RENT
+    LEASE
+}
+
 type User {
     id: ID!
     firstName: String
@@ -27,6 +34,15 @@ type User {
     activePlan: String
     createdAt: LocalDateTime
     updatedAt: LocalDateTime
+    lastLogin: LocalDateTime
+    profileCompleted: Boolean!
+    onboardingCompleted: Boolean!
+    subscriptionPlan: String
+    subscriptionActive: Boolean!
+    intention: UserIntention
+    profileDescription: String
+    profilePicture: String
+    favourites: [ID]
 }
 
 type Query {
@@ -55,6 +71,10 @@ type Mutation {
         city: String
         country: String
         enabled: Boolean
+        intention: UserIntention
+        profileDescription: String
+        profilePicture: String
+        favourites: [ID]
     ): User
 
     updateUser(
@@ -71,7 +91,19 @@ type Mutation {
         country: String
         role: Role
         enabled: Boolean
+        profileCompleted: Boolean
+        onboardingCompleted: Boolean
+        subscriptionPlan: String
+        subscriptionActive: Boolean
+        intention: UserIntention
+        profileDescription: String
+        profilePicture: String
+        favourites: [ID]
     ): User
 
     deleteUser(id: ID!): Boolean
+
+    markProfileComplete(id: ID!): User
+    markOnboardingComplete(id: ID!): User
+    updateSubscription(id: ID!, plan: String!, active: Boolean!): User
 }

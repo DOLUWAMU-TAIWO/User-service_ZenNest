@@ -40,7 +40,7 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role = Role.TENANT;
+    private Role role = Role.USER;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -59,6 +59,22 @@ public class User {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // New tracking fields
+    @Column
+    private LocalDateTime lastLogin;
+
+    @Column()
+    private boolean profileCompleted = false;
+
+    @Column()
+    private boolean onboardingCompleted = false;
+
+    @Column
+    private String subscriptionPlan;
+
+    @Column()
+    private boolean subscriptionActive = false;
 
     @ElementCollection
     @CollectionTable(name = "user_favourites", joinColumns = @JoinColumn(name = "user_id"))
@@ -235,6 +251,46 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
+
+    public boolean isProfileCompleted() {
+        return profileCompleted;
+    }
+
+    public void setProfileCompleted(boolean profileCompleted) {
+        this.profileCompleted = profileCompleted;
+    }
+
+    public boolean isOnboardingCompleted() {
+        return onboardingCompleted;
+    }
+
+    public void setOnboardingCompleted(boolean onboardingCompleted) {
+        this.onboardingCompleted = onboardingCompleted;
+    }
+
+    public String getSubscriptionPlan() {
+        return subscriptionPlan;
+    }
+
+    public void setSubscriptionPlan(String subscriptionPlan) {
+        this.subscriptionPlan = subscriptionPlan;
+    }
+
+    public boolean isSubscriptionActive() {
+        return subscriptionActive;
+    }
+
+    public void setSubscriptionActive(boolean subscriptionActive) {
+        this.subscriptionActive = subscriptionActive;
     }
 
     public List<UUID> getFavourites() {

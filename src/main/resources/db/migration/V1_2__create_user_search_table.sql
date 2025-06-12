@@ -1,5 +1,5 @@
--- Create user_search table for storing user search history
-CREATE TABLE user_search (
+-- Create user_search table for storing user search history only if missing
+CREATE TABLE IF NOT EXISTS user_search (
     id BIGSERIAL PRIMARY KEY,
     location VARCHAR(255),
     address VARCHAR(255),
