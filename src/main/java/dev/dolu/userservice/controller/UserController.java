@@ -153,7 +153,7 @@ public class UserController {
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
-    @PostMapping("/register-zenest")
+    @PostMapping("/register-zennest")
     public ResponseEntity<Map<String,Object>> registerZenest(@Valid @RequestBody User user) {
         logger.info("Registering user from Zennest: {}", user.getEmail());
         Map<String,Object> resp = userService.registerUserWithZenest(user);
@@ -238,14 +238,14 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Password has been reset successfully."));
     }
 
-    @PostMapping("/resend-zenest-verification")
+    @PostMapping("/resend-zennest-verification")
     public ResponseEntity<Map<String, String>> resendZenestVerification(@Valid @RequestBody ResendZenestRequest request) {
         logger.info("Resending Zenest verification code for email: {}", request.getEmail());
         verificationService.resendZenestVerificationCode(request.getEmail());
         return ResponseEntity.ok(Map.of("message", "Verification code resent successfully"));
     }
 
-    @PostMapping("/verify-zenest")
+    @PostMapping("/verify-zennest")
     public ResponseEntity<Map<String, String>> verifyZenest(@Valid @RequestBody VerifyZenestRequest request) {
         logger.info("Verifying Zenest code for email: {}", request.getEmail());
         verificationService.verifyZenestCode(request.getEmail(), request.getCode());
