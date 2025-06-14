@@ -55,6 +55,25 @@ public class UserController {
         }
     }
 
+    @PostMapping("/login-zennest")
+    public ResponseEntity<Map<String, String>> loginZenest(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String password = request.get("password");
+        logger.info("Zennest login requested for email: {}", email);
+
+        try {
+            Map<String, String> tokens = userService.loginZenest(email, password);
+            return ResponseEntity.ok(tokens);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            logger.error("Unexpected error during Zenest login", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected server error."));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> registerUser(@Valid @RequestBody User user) {
         logger.info("Registering user: {}", user.getEmail());
@@ -248,8 +267,22 @@ public class UserController {
     @PostMapping("/verify-zennest")
     public ResponseEntity<Map<String, String>> verifyZenest(@Valid @RequestBody VerifyZenestRequest request) {
         logger.info("Verifying Zenest code for email: {}", request.getEmail());
-        verificationService.verifyZenestCode(request.getEmail(), request.getCode());
-        return ResponseEntity.ok(Map.of("message", "User verified successfully"));
+
+        boolean verified = verificationService.verifyZenestCode(request.getEmail(), request.getCode());
+        if (!verified) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid or expired verification code"));
+        }
+
+        // Generate tokens after successful verification
+        String accessToken = jwtUtils.generateJwtToken(request.getEmail());
+        String refreshToken = jwtUtils.generateRefreshToken(request.getEmail());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "User verified successfully",
+                "accessToken", accessToken,
+                "refreshToken", refreshToken
+        ));
     }
 
 

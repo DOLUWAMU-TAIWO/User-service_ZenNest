@@ -168,6 +168,36 @@ public class UserService {
 
 
     /**
+     * Authenticates a user for Zenest flow by email and password, and issues JWT tokens upon successful login.
+     * If the account is not verified, resends the Zenest verification code and returns a 403 Forbidden error.
+     */
+    public Map<String, String> loginZenest(String email, String password) throws MessagingException {
+        long startTime = System.currentTimeMillis();
+        User user = userRepository.findByEmail(email);
+        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            if (!user.isEnabled()) {
+                // resend Zenest-specific verification code
+                verificationService.resendZenestVerificationCode(email);
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account not verified. A new Zennest verification code has been sent.");
+            }
+            String accessToken = jwtUtils.generateJwtToken(email);
+            String refreshToken = jwtUtils.generateRefreshToken(email);
+            jwtUtils.storeRefreshToken(refreshToken, email);
+            customMetricService.recordLoginTime(System.currentTimeMillis() - startTime);
+            customMetricService.incrementLoginSuccessCounter();
+            user.setLastLogin(LocalDateTime.now());
+            userRepository.save(user);
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("accessToken", accessToken);
+            tokens.put("refreshToken", refreshToken);
+            return tokens;
+        }
+        customMetricService.recordLoginTime(System.currentTimeMillis() - startTime);
+        customMetricService.incrementLoginFailureCounter();
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
+    }
+
+    /**
      * Finds a user by their ID.
      *
      * @param userId The user's ID.
