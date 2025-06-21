@@ -305,6 +305,30 @@ public class UserService {
         verificationTokenRepository.delete(opt.get());
     }
 
+    @Transactional
+    public User increaseUserTotalEarnings(UUID userId, Double amount) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        user.increaseTotalEarnings(amount);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User setUserVisitation(UUID userId, boolean openVisitations) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setOpenVisitations(openVisitations);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User setUserPaymentVerified(UUID userId, boolean paymentVerified) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setPaymentVerified(paymentVerified);
+        return userRepository.save(user);
+    }
+
 
 
 

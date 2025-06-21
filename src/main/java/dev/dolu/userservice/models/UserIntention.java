@@ -4,6 +4,6 @@ public enum UserIntention {
     BUY,
     SELL,
     RENT,
-    LEASE
+    LEASE,
+    SHORTLET
 }
-

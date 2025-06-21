@@ -12,6 +12,36 @@ enum UserIntention {
     SELL
     RENT
     LEASE
+    SHORTLET
+}
+
+enum OnboardingFeature {
+    VERIFY_EMAIL
+    VERIFY_PHONE
+    COMPLETE_PROFILE
+    CREATE_FIRST_LISTING
+    SET_AVAILABLE_DATES
+    SET_PREFERRED_LANGUAGE
+    SET_PREFERRED_CURRENCY
+    SET_NOTIFICATION_PREFERENCES
+    SET_AVAILABLE_SLOTS
+    ADD_PAYMENT_METHOD
+    COMPLETE_PAYMENT_SETUP
+    CREATE_FIRST_LEASE
+    FEEDBACK_SURVEY
+}
+
+type PayoutInfo {
+    accountNumber: String
+    bankCode: String
+    bankName: String
+    accountHolderName: String
+    recipientCode: String
+    bvn: String
+    emailForPayouts: String
+    verified: Boolean
+    lastUpdated: LocalDateTime
+    currency: String
 }
 
 type User {
@@ -43,6 +73,11 @@ type User {
     profileDescription: String
     profilePicture: String
     favourites: [ID]
+    payoutInfo: PayoutInfo
+    totalEarnings: Float!
+    openVisitations: Boolean!
+    paymentVerified: Boolean!
+    completedFeatures: [OnboardingFeature!]!
 }
 
 type Query {
@@ -55,6 +90,7 @@ type Query {
     getUsersByCountry(country: String!): [User]
     getRecentUsers: [User]
     countUsers: Int
+    getCompletedOnboardingFeatures(userId: ID!): [OnboardingFeature!]!
 }
 
 type Mutation {
@@ -106,4 +142,5 @@ type Mutation {
     markProfileComplete(id: ID!): User
     markOnboardingComplete(id: ID!): User
     updateSubscription(id: ID!, plan: String!, active: Boolean!): User
+    markOnboardingFeatureCompleted(userId: ID!, feature: OnboardingFeature!): [OnboardingFeature!]!
 }

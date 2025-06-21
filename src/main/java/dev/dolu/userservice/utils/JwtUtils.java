@@ -103,4 +103,8 @@ public class JwtUtils {
         return false;
     }
 
+    // For testing only
+    void setJwtSecret(String secret) { this.jwtSecret = secret; }
+    void setJwtExpirationMs(long ms) { this.jwtExpirationMs = ms; }
+    void setRefreshExpirationMs(long ms) { this.refreshExpirationMs = ms; }
 }

@@ -285,6 +285,24 @@ public class UserController {
         ));
     }
 
+    @PatchMapping("/{id}/increase-earnings")
+    public ResponseEntity<User> increaseUserTotalEarnings(@PathVariable UUID id, @RequestParam Double amount) {
+        User updatedUser = userService.increaseUserTotalEarnings(id, amount);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PatchMapping("/{id}/visitation")
+    public ResponseEntity<UserDTO> setUserVisitation(@PathVariable UUID id, @RequestParam boolean openVisitations) {
+        User updatedUser = userService.setUserVisitation(id, openVisitations);
+        return ResponseEntity.ok(new UserDTO(updatedUser));
+    }
+
+    @PatchMapping("/{id}/payment-verified")
+    public ResponseEntity<UserDTO> setUserPaymentVerified(@PathVariable UUID id, @RequestParam boolean paymentVerified) {
+        User updatedUser = userService.setUserPaymentVerified(id, paymentVerified);
+        return ResponseEntity.ok(new UserDTO(updatedUser));
+    }
+
 
 
 

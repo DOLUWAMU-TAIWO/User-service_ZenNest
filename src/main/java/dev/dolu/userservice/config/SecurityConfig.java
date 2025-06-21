@@ -87,6 +87,7 @@ public class SecurityConfig {
                                 "/api/users/refresh-token", "/api/test-email",
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
+                        .requestMatchers("/api/users/*/payout-info").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

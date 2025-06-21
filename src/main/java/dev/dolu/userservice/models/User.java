@@ -7,7 +7,9 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -86,6 +88,24 @@ public class User {
 
     private String profileDescription;
     private String profilePicture;
+
+    @Embedded
+    private PayoutInfo payoutInfo; // TODO: Consider resolving some payout fields from the payment service for business logic
+
+    @Column
+    private Double totalEarnings = 0.0; // TODO: Increment this from the payment service whenever a payout is completed
+
+    @Column(nullable = false)
+    private boolean openVisitations = false;
+
+    @Column(nullable = false)
+    private boolean paymentVerified = false;
+
+    @ElementCollection(targetClass = OnboardingFeature.class, fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name = "user_onboarding_features", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "feature")
+    private Set<OnboardingFeature> completedFeatures = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {
@@ -323,5 +343,52 @@ public class User {
 
     public void setProfilePicture(String profilePicture) {
         this.profilePicture = profilePicture;
+    }
+
+    public PayoutInfo getPayoutInfo() {
+        return payoutInfo;
+    }
+
+    public void setPayoutInfo(PayoutInfo payoutInfo) {
+        this.payoutInfo = payoutInfo;
+    }
+
+    public Double getTotalEarnings() {
+        return totalEarnings;
+    }
+
+    public void setTotalEarnings(Double totalEarnings) {
+        this.totalEarnings = totalEarnings;
+    }
+
+    public void increaseTotalEarnings(Double amount) {
+        if (amount != null && amount > 0) {
+            if (this.totalEarnings == null) this.totalEarnings = 0.0;
+            this.totalEarnings += amount;
+        }
+    }
+
+    public boolean isOpenVisitations() {
+        return openVisitations;
+    }
+
+    public void setOpenVisitations(boolean openVisitations) {
+        this.openVisitations = openVisitations;
+    }
+
+    public boolean isPaymentVerified() {
+        return paymentVerified;
+    }
+
+    public void setPaymentVerified(boolean paymentVerified) {
+        this.paymentVerified = paymentVerified;
+    }
+
+    public Set<OnboardingFeature> getCompletedFeatures() {
+        return completedFeatures;
+    }
+
+    public void setCompletedFeatures(Set<OnboardingFeature> completedFeatures) {
+        this.completedFeatures = completedFeatures;
     }
 }
