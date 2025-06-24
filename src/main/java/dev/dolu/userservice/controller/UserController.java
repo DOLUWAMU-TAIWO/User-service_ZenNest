@@ -172,14 +172,14 @@ public class UserController {
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
+
     @PostMapping("/register-zennest")
-    public ResponseEntity<Map<String,Object>> registerZenest(@Valid @RequestBody User user) {
+    public ResponseEntity<Map<String, Object>> registerZenest(@Valid @RequestBody User user) {
         logger.info("Registering user from Zennest: {}", user.getEmail());
-        Map<String,Object> resp = userService.registerUserWithZenest(user);
+        Map<String, Object> resp = userService.registerUserWithZenest(user);
         return new ResponseEntity<>(resp,
                 resp.containsKey("emailStatus") ? HttpStatus.ACCEPTED : HttpStatus.CREATED);
     }
-
 
 
     @GetMapping("/{id}")
@@ -211,6 +211,7 @@ public class UserController {
         List<User> users = userRepository.findAllById(userIds);
         return ResponseEntity.ok(users);
     }
+
     @PatchMapping("/{id}/profile-complete")
     public ResponseEntity<User> markProfileComplete(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.markProfileComplete(id));
@@ -223,7 +224,7 @@ public class UserController {
 
     @PatchMapping("/{id}/subscription")
     public ResponseEntity<User> updateSubscription(@PathVariable UUID id,
-                                                   @RequestBody Map<String,Object> req) {
+                                                   @RequestBody Map<String, Object> req) {
         String plan = (String) req.get("plan");
         Boolean active = (Boolean) req.get("active");
         return ResponseEntity.ok(userService.updateSubscription(id, plan, active));
@@ -303,10 +304,34 @@ public class UserController {
         return ResponseEntity.ok(new UserDTO(updatedUser));
     }
 
+    @PostMapping("/favourites/add")
+    public ResponseEntity<?> addListingToFavourites(@RequestBody Map<String, String> payload) {
+        try {
+            UUID userId = UUID.fromString(payload.get("userId"));
+            UUID listingId = UUID.fromString(payload.get("listingId"));
+            userService.addListingToFavourites(userId, listingId);
+            return ResponseEntity.ok(Map.of("message", "Listing added to favourites."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid UUID format."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        }
 
 
-
-
+    }
+    @PostMapping("/favourites/remove")
+    public ResponseEntity<?> removeListingFromFavourites(@RequestBody Map<String, String> payload) {
+        try {
+            UUID userId = UUID.fromString(payload.get("userId"));
+            UUID listingId = UUID.fromString(payload.get("listingId"));
+            userService.removeListingFromFavourites(userId, listingId);
+            return ResponseEntity.ok(Map.of("message", "Listing removed from favourites."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid UUID format."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        }
+    }
 }
 
 

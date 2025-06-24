@@ -329,6 +329,39 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /**
+     * Adds a listing to the user's favourites list if not already present.
+     * @param userId UUID of the user
+     * @param listingId UUID of the listing to add
+     */
+    @Transactional
+    public void addListingToFavourites(UUID userId, UUID listingId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        if (user.getFavourites() == null) {
+            user.setFavourites(new java.util.ArrayList<>());
+        }
+        if (!user.getFavourites().contains(listingId)) {
+            user.getFavourites().add(listingId);
+            userRepository.save(user);
+        }
+    }
+
+    /**
+     * Removes a listing from the user's favourites list if present.
+     * @param userId UUID of the user
+     * @param listingId UUID of the listing to remove
+     */
+    @Transactional
+    public void removeListingFromFavourites(UUID userId, UUID listingId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        if (user.getFavourites() != null && user.getFavourites().contains(listingId)) {
+            user.getFavourites().remove(listingId);
+            userRepository.save(user);
+        }
+    }
+
 
 
 
