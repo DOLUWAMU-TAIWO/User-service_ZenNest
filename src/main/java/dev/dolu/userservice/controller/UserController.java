@@ -16,7 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
+import dev.dolu.userservice.models.Role;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -168,6 +168,29 @@ public class UserController {
             userDetails.put("profileDescription", user.getProfileDescription());
             userDetails.put("profilePicture", user.getProfilePicture());
             userDetails.put("updatedAt", user.getUpdatedAt());
+
+            // Additional fields
+            userDetails.put("openVisitations", user.isOpenVisitations());
+            userDetails.put("paymentVerified", user.isPaymentVerified());
+            userDetails.put("fcmDeviceToken", user.getFcmDeviceToken());
+            userDetails.put("lastLogin", user.getLastLogin());
+            userDetails.put("profileCompleted", user.isProfileCompleted());
+            userDetails.put("onboardingCompleted", user.isOnboardingCompleted());
+            userDetails.put("subscriptionPlan", user.getSubscriptionPlan());
+            userDetails.put("subscriptionActive", user.isSubscriptionActive());
+            userDetails.put("totalEarnings", user.getTotalEarnings());
+            userDetails.put("completedFeatures", user.getCompletedFeatures());
+            userDetails.put("businessType", user.getBusinessType());
+            userDetails.put("visitDuration", user.getVisitDuration());
+            userDetails.put("autoAcceptBooking", user.isAutoAcceptBooking());
+            userDetails.put("autoAcceptVisitation", user.isAutoAcceptVisitation());
+            userDetails.put("emailNotificationsEnabled", user.isEmailNotificationsEnabled());
+            userDetails.put("smsNotificationsEnabled", user.isSmsNotificationsEnabled());
+            userDetails.put("pushNotificationsEnabled", user.isPushNotificationsEnabled());
+            userDetails.put("bufferTimeHours", user.getBufferTimeHours());
+            userDetails.put("createdAt", user.getCreatedAt());
+            userDetails.put("version", user.getVersion());
+
             return ResponseEntity.ok(userDetails);
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
@@ -332,6 +355,152 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            userService.changePassword(user.getId(), request);
+            return ResponseEntity.ok(Map.of("message", "Password changed successfully."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-visit-duration")
+    public ResponseEntity<?> setVisitDuration(@RequestParam("duration") VisitDuration duration, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            if (user.getRole() != Role.LANDLORD) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only LANDLORD users can perform this action."));
+            }
+            userService.setVisitDuration(user.getId(), duration);
+            return ResponseEntity.ok(Map.of("message", "Visit duration updated successfully."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+    @PostMapping("/set-auto-accept-visitation")
+    public ResponseEntity<?> setAutoAcceptVisitation(@RequestParam("enabled") boolean enabled, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            if (user.getRole() != Role.LANDLORD) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only LANDLORD users can perform this action."));
+            }
+            userService.setAutoAcceptVisitation(user.getId(), enabled);
+            return ResponseEntity.ok(Map.of("message", "Auto-accept visitation updated successfully."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+    @PostMapping("/set-auto-accept-booking")
+    public ResponseEntity<?> setAutoAcceptBooking(@RequestParam("enabled") boolean enabled, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            if (user.getRole() != Role.LANDLORD) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only LANDLORD users can perform this action."));
+            }
+            userService.setAutoAcceptBooking(user.getId(), enabled);
+            return ResponseEntity.ok(Map.of("message", "Auto-accept booking updated successfully."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+    @PostMapping("/set-notification-preferences")
+    public ResponseEntity<?> setNotificationPreferences(
+            @RequestParam(value = "emailEnabled", required = false) Boolean emailEnabled,
+            @RequestParam(value = "smsEnabled", required = false) Boolean smsEnabled,
+            @RequestParam(value = "pushEnabled", required = false) Boolean pushEnabled,
+            HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            userService.setNotificationPreferences(user.getId(), emailEnabled, smsEnabled, pushEnabled);
+            return ResponseEntity.ok(Map.of("message", "Notification preferences updated successfully."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+    @PostMapping("/set-buffer-time")
+    public ResponseEntity<?> setBufferTime(@RequestParam("hours") int hours, HttpServletRequest httpRequest) {
+        try {
+            if (hours < 0 || hours > 72) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Buffer time must be between 0 and 72 hours."));
+            }
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            if (user.getRole() != Role.LANDLORD) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only LANDLORD users can perform this action."));
+            }
+            userService.setBufferTimeHours(user.getId(), hours);
+            return ResponseEntity.ok(Map.of("message", "Buffer time updated successfully.", "bufferTimeHours", hours));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+
 }
 
 

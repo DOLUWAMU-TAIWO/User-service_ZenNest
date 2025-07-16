@@ -1,8 +1,10 @@
 package dev.dolu.userservice.service;
 
 import dev.dolu.userservice.metrics.CustomMetricService;
+import dev.dolu.userservice.models.ChangePasswordRequest;
 import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.models.VerificationToken;
+import dev.dolu.userservice.models.VisitDuration;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.repository.VerificationTokenRepository;
 import dev.dolu.userservice.utils.JwtUtils;
@@ -37,7 +39,6 @@ public class UserService {
     private final VerificationService verificationService;
     private final VerificationTokenRepository verificationTokenRepository;
     private final EmailService emailService;
-
 
 
     private final CustomMetricService customMetricService;
@@ -106,11 +107,12 @@ public class UserService {
 
         return response;
     }
+
     /**
      * Authenticates a user by their email and password, and issues JWT tokens upon successful login.
      * If the account is not verified, resends the verification token and returns a 403 Forbidden error.
      *
-     * @param email The user's email.
+     * @param email    The user's email.
      * @param password The user's raw password.
      * @return A map containing the access and refresh tokens.
      * @throws MessagingException If an error occurs while resending the verification token.
@@ -286,6 +288,7 @@ public class UserService {
         emailService.sendPasswordResetEmail(email, code);
 
     }
+
     public void resetPassword(String email, String code, String newPassword) {
         User user = userRepository.findByEmail(email);
         if (user == null) throw new ResponseStatusException(NOT_FOUND, "User not found");
@@ -331,7 +334,8 @@ public class UserService {
 
     /**
      * Adds a listing to the user's favourites list if not already present.
-     * @param userId UUID of the user
+     *
+     * @param userId    UUID of the user
      * @param listingId UUID of the listing to add
      */
     @Transactional
@@ -349,7 +353,8 @@ public class UserService {
 
     /**
      * Removes a listing from the user's favourites list if present.
-     * @param userId UUID of the user
+     *
+     * @param userId    UUID of the user
      * @param listingId UUID of the listing to remove
      */
     @Transactional
@@ -362,8 +367,71 @@ public class UserService {
         }
     }
 
+    /**
+     * Changes the password for the authenticated user.
+     * Validates current password, checks new password confirmation, and updates password.
+     *
+     * @param userId  The ID of the user changing their password.
+     * @param request The ChangePasswordRequest DTO.
+     */
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
 
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new ResponseStatusException(BAD_REQUEST, "Current password is incorrect");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ResponseStatusException(BAD_REQUEST, "New password and confirmation do not match");
+        }
+        if (request.getNewPassword().length() < 8) {
+            throw new ResponseStatusException(BAD_REQUEST, "New password must be at least 8 characters long");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
 
+    @Transactional
+    public void setVisitDuration(UUID userId, VisitDuration visitDuration) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setVisitDuration(visitDuration);
+        userRepository.save(user);
+    }
 
+    @Transactional
+    public void setAutoAcceptBooking(UUID userId, boolean autoAccept) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setAutoAcceptBooking(autoAccept);
+        userRepository.save(user);
+    }
 
+    @Transactional
+    public void setAutoAcceptVisitation(UUID userId, boolean autoAccept) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setAutoAcceptVisitation(autoAccept);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void setNotificationPreferences(UUID userId, Boolean emailEnabled, Boolean smsEnabled, Boolean pushEnabled) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        if (emailEnabled != null) user.setEmailNotificationsEnabled(emailEnabled);
+        if (smsEnabled != null) user.setSmsNotificationsEnabled(smsEnabled);
+        if (pushEnabled != null) user.setPushNotificationsEnabled(pushEnabled);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void setBufferTimeHours(UUID userId, int bufferTimeHours) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
+        user.setBufferTimeHours(bufferTimeHours);
+        userRepository.save(user);
+    }
 }
+

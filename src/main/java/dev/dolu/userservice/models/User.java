@@ -107,6 +107,36 @@ public class User {
     @Column(name = "feature")
     private Set<OnboardingFeature> completedFeatures = new HashSet<>();
 
+    @Version
+    private Long version = 0L;
+
+    @Enumerated(EnumType.STRING)
+    private BusinessType businessType;
+
+    @Enumerated(EnumType.STRING)
+    private VisitDuration visitDuration = VisitDuration.getDefault();
+
+    @Column(nullable = false)
+    private boolean autoAcceptBooking = false;
+
+    @Column(nullable = false)
+    private boolean autoAcceptVisitation = false;
+
+    @Column(nullable = false)
+    private boolean emailNotificationsEnabled = true;
+
+    @Column(nullable = false)
+    private boolean smsNotificationsEnabled = false;
+
+    @Column(nullable = false)
+    private boolean pushNotificationsEnabled = false;
+
+    @Column(nullable = false)
+    private int bufferTimeHours = 0;
+
+    @Column(length = 512)
+    private String fcmDeviceToken;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -390,5 +420,85 @@ public class User {
 
     public void setCompletedFeatures(Set<OnboardingFeature> completedFeatures) {
         this.completedFeatures = completedFeatures;
+    }
+
+    public BusinessType getBusinessType() {
+        return businessType;
+    }
+
+    public void setBusinessType(BusinessType businessType) {
+        this.businessType = businessType;
+    }
+
+    public VisitDuration getVisitDuration() {
+        return visitDuration;
+    }
+
+    public void setVisitDuration(VisitDuration visitDuration) {
+        this.visitDuration = visitDuration;
+    }
+
+    public boolean isAutoAcceptBooking() {
+        return autoAcceptBooking;
+    }
+
+    public void setAutoAcceptBooking(boolean autoAcceptBooking) {
+        this.autoAcceptBooking = autoAcceptBooking;
+    }
+
+    public boolean isAutoAcceptVisitation() {
+        return autoAcceptVisitation;
+    }
+
+    public void setAutoAcceptVisitation(boolean autoAcceptVisitation) {
+        this.autoAcceptVisitation = autoAcceptVisitation;
+    }
+
+    public boolean isEmailNotificationsEnabled() {
+        return emailNotificationsEnabled;
+    }
+
+    public void setEmailNotificationsEnabled(boolean emailNotificationsEnabled) {
+        this.emailNotificationsEnabled = emailNotificationsEnabled;
+    }
+
+    public boolean isSmsNotificationsEnabled() {
+        return smsNotificationsEnabled;
+    }
+
+    public void setSmsNotificationsEnabled(boolean smsNotificationsEnabled) {
+        this.smsNotificationsEnabled = smsNotificationsEnabled;
+    }
+
+    public boolean isPushNotificationsEnabled() {
+        return pushNotificationsEnabled;
+    }
+
+    public void setPushNotificationsEnabled(boolean pushNotificationsEnabled) {
+        this.pushNotificationsEnabled = pushNotificationsEnabled;
+    }
+
+    public int getBufferTimeHours() {
+        return bufferTimeHours;
+    }
+
+    public void setBufferTimeHours(int bufferTimeHours) {
+        this.bufferTimeHours = bufferTimeHours;
+    }
+
+    public String getFcmDeviceToken() {
+        return fcmDeviceToken;
+    }
+
+    public void setFcmDeviceToken(String fcmDeviceToken) {
+        this.fcmDeviceToken = fcmDeviceToken;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

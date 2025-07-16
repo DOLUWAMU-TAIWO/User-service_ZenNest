@@ -9,6 +9,7 @@ public class UserDTO {
     private PayoutInfo payoutInfo;
     private boolean openVisitations;
     private boolean isPaymentVerified;
+    private String fcmDeviceToken;
 
     // Constructor
     public UserDTO(User user) {
@@ -18,6 +19,7 @@ public class UserDTO {
         this.payoutInfo = user.getPayoutInfo();
         this.openVisitations = user.isOpenVisitations();
         this.isPaymentVerified = user.isPaymentVerified();
+        this.fcmDeviceToken = user.getFcmDeviceToken();
     }
 
     // Getters and setters
@@ -67,5 +69,13 @@ public class UserDTO {
 
     public void setPaymentVerified(boolean paymentVerified) {
         isPaymentVerified = paymentVerified;
+    }
+
+    public String getFcmDeviceToken() {
+        return fcmDeviceToken;
+    }
+
+    public void setFcmDeviceToken(String fcmDeviceToken) {
+        this.fcmDeviceToken = fcmDeviceToken;
     }
 }
