@@ -164,7 +164,7 @@ public class EmailService {
 
 
     // 🚀 Function 3: Generic Email Sending Function (Used Internally)
-    private boolean sendEmail(String to, String subject, String content) {
+    public boolean sendEmail(String to, String subject, String content) {
         long startTime = System.currentTimeMillis();
         try {
             boolean result = CompletableFuture.supplyAsync(() -> {
