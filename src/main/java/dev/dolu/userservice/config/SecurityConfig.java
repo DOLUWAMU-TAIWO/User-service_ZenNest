@@ -56,7 +56,7 @@ public class SecurityConfig {
                 "https://zennest.live",
                 "https://qorelabs.store"
         ));
-        config.setAllowedMethods(List.of("GET", "POST", "OPTIONS", "PUT", "DELETE"));
+        config.setAllowedMethods(List.of("GET", "POST", "PATCH", "OPTIONS", "PUT", "DELETE"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-KEY"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
