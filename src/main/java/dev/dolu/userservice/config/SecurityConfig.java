@@ -54,7 +54,8 @@ public class SecurityConfig {
                 "https://zennest.ng",
                 "https://zennest.dev",
                 "https://zennest.live",
-                "https://qorelabs.store"
+                "https://qorelabs.store",
+                "https://zennest.africa"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "OPTIONS", "PUT", "DELETE"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-KEY"));
