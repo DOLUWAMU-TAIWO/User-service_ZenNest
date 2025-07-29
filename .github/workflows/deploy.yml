@@ -47,8 +47,8 @@ jobs:
 
       - name: Build and Push Tagged Docker Image
         run: |
-          docker buildx create --use --name user-builder || true
+          docker buildx create --use --name messaging-builder || true
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            -t ${{ secrets.DOCKER_USERNAME }}/user-service:${{ env.TAG }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/messaging-service:${{ env.TAG }} \
             --push .
