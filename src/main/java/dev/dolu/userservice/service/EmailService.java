@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,6 +30,9 @@ public class EmailService {
 
     @Value("${email.service.api-key}")
     private String apiKey;
+
+    @Value("${bulk.email.service.url}")
+    private String bulkEmailServiceUrl;
 
     // Shared executor for virtual threads using JDK 21's approach
     private final ExecutorService virtualThreadExecutor =
@@ -198,6 +203,50 @@ public class EmailService {
             long duration = System.currentTimeMillis() - startTime;
             customMetricService.recordEmailSendingTime(duration);
             logger.error("Failed to send email: {}", e.getMessage(), e);
+            customMetricService.incrementEmailFailureCounter();
+            return false;
+        }
+    }
+
+    // 🚀 Bulk Email Sending Function
+    public boolean sendBulkEmail(List<String> recipients, String subject, String content) {
+        long startTime = System.currentTimeMillis();
+        try {
+            boolean result = CompletableFuture.supplyAsync(() -> {
+                // Build bulk email request payload
+                Map<String, Object> bulkRequest = Map.of(
+                        "recipients", recipients,
+                        "subject", subject,
+                        "content", content
+                );
+
+                // Set headers with API key
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Content-Type", "application/json");
+                headers.set("Authorization", "Bearer " + apiKey);
+
+                // Create HTTP request entity
+                HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(bulkRequest, headers);
+
+                // Send HTTP request to external email microservice bulk endpoint
+                ResponseEntity<String> response = restTemplate.exchange(
+                        bulkEmailServiceUrl,
+                        HttpMethod.POST,
+                        requestEntity,
+                        String.class
+                );
+                // Increment sent counter if successful
+                customMetricService.incrementEmailSentCounter();
+                return response.getStatusCode().is2xxSuccessful();
+            }, virtualThreadExecutor).get();
+
+            long duration = System.currentTimeMillis() - startTime;
+            customMetricService.recordEmailSendingTime(duration);
+            return result;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            customMetricService.recordEmailSendingTime(duration);
+            logger.error("Failed to send bulk email: {}", e.getMessage(), e);
             customMetricService.incrementEmailFailureCounter();
             return false;
         }

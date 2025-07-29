@@ -30,12 +30,12 @@ public class NewsletterController {
     public ResponseEntity<?> sendNewsletter(@RequestParam("subject") String subject,
                                             @RequestParam("content") String content) {
         List<NewsletterSubscriber> subscribers = newsletterSubscriberRepository.findAll();
-        int sent = 0;
-        for (NewsletterSubscriber subscriber : subscribers) {
-            boolean success = emailService.sendEmail(subscriber.getEmail(), subject, content);
-            if (success) sent++;
+        List<String> emails = subscribers.stream().map(NewsletterSubscriber::getEmail).toList();
+        boolean success = emailService.sendBulkEmail(emails, subject, content);
+        if (success) {
+            return ResponseEntity.ok("Newsletter sent to " + emails.size() + " subscribers.");
+        } else {
+            return ResponseEntity.status(500).body("Failed to send newsletter to subscribers.");
         }
-        return ResponseEntity.ok("Newsletter sent to " + sent + " subscribers.");
     }
 }
-
