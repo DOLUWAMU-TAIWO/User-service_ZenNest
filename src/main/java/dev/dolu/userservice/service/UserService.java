@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -433,5 +434,57 @@ public class UserService {
         user.setBufferTimeHours(bufferTimeHours);
         userRepository.save(user);
     }
-}
 
+    public User getUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    public User updateSearchRadius(UUID userId, Integer searchRadius) {
+        User user = getUserById(userId);
+        user.setSearchRadius(searchRadius);
+        return userRepository.save(user);
+    }
+
+    public User updatePriceAlerts(UUID userId, Boolean priceAlerts) {
+        User user = getUserById(userId);
+        user.setPriceAlerts(priceAlerts);
+        return userRepository.save(user);
+    }
+
+    public User updateNewListingAlerts(UUID userId, Boolean newListingAlerts) {
+        User user = getUserById(userId);
+        user.setNewListingAlerts(newListingAlerts);
+        return userRepository.save(user);
+    }
+
+    public User updateVisitReminders(UUID userId, Boolean visitReminders) {
+        User user = getUserById(userId);
+        user.setVisitReminders(visitReminders);
+        return userRepository.save(user);
+    }
+
+    public User updateAutoSaveSearches(UUID userId, Boolean autoSaveSearches) {
+        User user = getUserById(userId);
+        user.setAutoSaveSearches(autoSaveSearches);
+        return userRepository.save(user);
+    }
+
+    public User updateMaxBudget(UUID userId, Double maxBudget) {
+        User user = getUserById(userId);
+        user.setMaxBudget(maxBudget);
+        return userRepository.save(user);
+    }
+
+    public User updatePreferredPropertyTypes(UUID userId, List<String> preferredPropertyTypes) {
+        User user = getUserById(userId);
+        user.setPreferredPropertyTypes(preferredPropertyTypes);
+        return userRepository.save(user);
+    }
+
+    public User updatePreferredAmenities(UUID userId, List<String> preferredAmenities) {
+        User user = getUserById(userId);
+        user.setPreferredAmenities(preferredAmenities);
+        return userRepository.save(user);
+    }
+}

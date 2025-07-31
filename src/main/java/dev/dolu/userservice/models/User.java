@@ -137,6 +137,35 @@ public class User {
     @Column(length = 512)
     private String fcmDeviceToken;
 
+    // Tenant-specific fields
+    @Column
+    private Integer searchRadius;
+
+    @Column
+    private Boolean priceAlerts;
+
+    @Column
+    private Boolean newListingAlerts;
+
+    @Column
+    private Boolean visitReminders;
+
+    @Column
+    private Boolean autoSaveSearches;
+
+    @Column
+    private Double maxBudget;
+
+    @ElementCollection
+    @CollectionTable(name = "user_preferred_property_types", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "property_type")
+    private List<String> preferredPropertyTypes;
+
+    @ElementCollection
+    @CollectionTable(name = "user_preferred_amenities", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "amenity")
+    private List<String> preferredAmenities;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -501,4 +530,69 @@ public class User {
     public void setVersion(Long version) {
         this.version = version;
     }
+
+    public Integer getSearchRadius() {
+        return searchRadius;
+    }
+
+    public void setSearchRadius(Integer searchRadius) {
+        this.searchRadius = searchRadius;
+    }
+
+    public Boolean getPriceAlerts() {
+        return priceAlerts;
+    }
+
+    public void setPriceAlerts(Boolean priceAlerts) {
+        this.priceAlerts = priceAlerts;
+    }
+
+    public Boolean getNewListingAlerts() {
+        return newListingAlerts;
+    }
+
+    public void setNewListingAlerts(Boolean newListingAlerts) {
+        this.newListingAlerts = newListingAlerts;
+    }
+
+    public Boolean getVisitReminders() {
+        return visitReminders;
+    }
+
+    public void setVisitReminders(Boolean visitReminders) {
+        this.visitReminders = visitReminders;
+    }
+
+    public Boolean getAutoSaveSearches() {
+        return autoSaveSearches;
+    }
+
+    public void setAutoSaveSearches(Boolean autoSaveSearches) {
+        this.autoSaveSearches = autoSaveSearches;
+    }
+
+    public Double getMaxBudget() {
+        return maxBudget;
+    }
+
+    public void setMaxBudget(Double maxBudget) {
+        this.maxBudget = maxBudget;
+    }
+
+    public List<String> getPreferredPropertyTypes() {
+        return preferredPropertyTypes;
+    }
+
+    public void setPreferredPropertyTypes(List<String> preferredPropertyTypes) {
+        this.preferredPropertyTypes = preferredPropertyTypes;
+    }
+
+    public List<String> getPreferredAmenities() {
+        return preferredAmenities;
+    }
+
+    public void setPreferredAmenities(List<String> preferredAmenities) {
+        this.preferredAmenities = preferredAmenities;
+    }
 }
+

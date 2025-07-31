@@ -162,6 +162,7 @@ public class UserController {
             userDetails.put("city", user.getCity());
             userDetails.put("country", user.getCountry());
             userDetails.put("dateOfBirth", user.getDateOfBirth());
+            userDetails.put("profession", user.getProfession());
             userDetails.put("activePlan", user.getActivePlan());
             userDetails.put("favourites", user.getFavourites());
             userDetails.put("intention", user.getIntention());
@@ -190,6 +191,20 @@ public class UserController {
             userDetails.put("bufferTimeHours", user.getBufferTimeHours());
             userDetails.put("createdAt", user.getCreatedAt());
             userDetails.put("version", user.getVersion());
+            // Additional missing fields
+            userDetails.put("authProvider", user.getAuthProvider());
+            userDetails.put("payoutInfo", user.getPayoutInfo());
+
+// Tenant-specific fields
+            userDetails.put("searchRadius", user.getSearchRadius());
+            userDetails.put("priceAlerts", user.getPriceAlerts());
+            userDetails.put("newListingAlerts", user.getNewListingAlerts());
+            userDetails.put("visitReminders", user.getVisitReminders());
+            userDetails.put("autoSaveSearches", user.getAutoSaveSearches());
+            userDetails.put("maxBudget", user.getMaxBudget());
+            userDetails.put("preferredPropertyTypes", user.getPreferredPropertyTypes());
+            userDetails.put("preferredAmenities", user.getPreferredAmenities());
+
 
             return ResponseEntity.ok(userDetails);
         }
@@ -493,6 +508,175 @@ public class UserController {
             }
             userService.setBufferTimeHours(user.getId(), hours);
             return ResponseEntity.ok(Map.of("message", "Buffer time updated successfully.", "bufferTimeHours", hours));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+
+    @PostMapping("/set-search-radius")
+    public ResponseEntity<?> setSearchRadius(@RequestParam("radius") Integer radius, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updateSearchRadius(user.getId(), radius);
+            return ResponseEntity.ok(Map.of("message", "Search radius updated successfully.", "searchRadius", radius));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-price-alerts")
+    public ResponseEntity<?> setPriceAlerts(@RequestParam("enabled") Boolean enabled, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updatePriceAlerts(user.getId(), enabled);
+            return ResponseEntity.ok(Map.of("message", "Price alerts updated successfully.", "priceAlerts", enabled));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-new-listing-alerts")
+    public ResponseEntity<?> setNewListingAlerts(@RequestParam("enabled") Boolean enabled, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updateNewListingAlerts(user.getId(), enabled);
+            return ResponseEntity.ok(Map.of("message", "New listing alerts updated successfully.", "newListingAlerts", enabled));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-visit-reminders")
+    public ResponseEntity<?> setVisitReminders(@RequestParam("enabled") Boolean enabled, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updateVisitReminders(user.getId(), enabled);
+            return ResponseEntity.ok(Map.of("message", "Visit reminders updated successfully.", "visitReminders", enabled));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-auto-save-searches")
+    public ResponseEntity<?> setAutoSaveSearches(@RequestParam("enabled") Boolean enabled, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updateAutoSaveSearches(user.getId(), enabled);
+            return ResponseEntity.ok(Map.of("message", "Auto-save searches updated successfully.", "autoSaveSearches", enabled));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-max-budget")
+    public ResponseEntity<?> setMaxBudget(@RequestParam("budget") Double budget, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updateMaxBudget(user.getId(), budget);
+            return ResponseEntity.ok(Map.of("message", "Max budget updated successfully.", "maxBudget", budget));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-preferred-property-types")
+    public ResponseEntity<?> setPreferredPropertyTypes(@RequestBody List<String> propertyTypes, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updatePreferredPropertyTypes(user.getId(), propertyTypes);
+            return ResponseEntity.ok(Map.of("message", "Preferred property types updated successfully.", "preferredPropertyTypes", propertyTypes));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/set-preferred-amenities")
+    public ResponseEntity<?> setPreferredAmenities(@RequestBody List<String> amenities, HttpServletRequest httpRequest) {
+        try {
+            String jwt = httpRequest.getHeader("Authorization");
+            if (jwt == null || !jwt.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid token."));
+            }
+            String email = jwtUtils.getUsernameFromJwtToken(jwt.substring(7));
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+            }
+            User updatedUser = userService.updatePreferredAmenities(user.getId(), amenities);
+            return ResponseEntity.ok(Map.of("message", "Preferred amenities updated successfully.", "preferredAmenities", amenities));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
         } catch (Exception e) {

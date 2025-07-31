@@ -79,6 +79,27 @@ type User {
     openVisitations: Boolean!
     paymentVerified: Boolean!
     completedFeatures: [OnboardingFeature!]!
+
+    # ADD THESE NOTIFICATION SETTINGS
+    emailNotificationsEnabled: Boolean
+    smsNotificationsEnabled: Boolean
+    pushNotificationsEnabled: Boolean
+
+    # ADD THESE LANDLORD SETTINGS
+    visitDuration: String
+    autoAcceptBooking: Boolean
+    autoAcceptVisitation: Boolean
+    bufferTimeHours: Int
+
+    # ADD THESE TENANT SETTINGS
+    searchRadius: Int
+    priceAlerts: Boolean
+    newListingAlerts: Boolean
+    visitReminders: Boolean
+    autoSaveSearches: Boolean
+    maxBudget: Float
+    preferredPropertyTypes: [String]
+    preferredAmenities: [String]
 }
 
 type Query {
