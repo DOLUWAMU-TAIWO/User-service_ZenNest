@@ -1,5 +1,8 @@
 package dev.dolu.userservice.controller;
 
+
+import dev.dolu.userservice.exception.BadRequestException;
+import dev.dolu.userservice.exception.NotFoundException;
 import dev.dolu.userservice.models.OnboardingFeature;
 import dev.dolu.userservice.models.PayoutInfo;
 import dev.dolu.userservice.models.Role;
@@ -25,6 +28,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static graphql.ErrorType.DataFetchingException;
 
 @Controller
 public class GraphqlController {
@@ -174,81 +179,137 @@ public class GraphqlController {
             @Argument Boolean subscriptionActive,
             @Argument UserIntention intention, @Argument String profileDescription,
             @Argument String profilePicture, @Argument List<UUID> favourites,
-            // New fields
             @Argument Boolean openVisitations, @Argument Boolean paymentVerified,
             @Argument Double totalEarnings, @Argument Set<OnboardingFeature> completedFeatures,
-            // PayoutInfo fields
-            @Argument String payoutAccountNumber, @Argument String payoutBankCode,
-            @Argument String payoutBankName, @Argument String payoutAccountHolderName,
-            @Argument String payoutRecipientCode, @Argument String payoutBvn,
-            @Argument String payoutEmailForPayouts, @Argument Boolean payoutVerified,
-            @Argument String payoutCurrency, @Argument String payoutLastUpdated
+            @Argument Boolean emailNotificationsEnabled,
+            @Argument Boolean smsNotificationsEnabled,
+            @Argument Boolean pushNotificationsEnabled,
+            @Argument Integer bufferTimeHours,
+            @Argument String fcmDeviceToken,
+            @Argument Integer searchRadius,
+            @Argument Boolean priceAlerts,
+            @Argument Boolean newListingAlerts,
+            @Argument Boolean visitReminders,
+            @Argument Boolean autoSaveSearches,
+            @Argument Double maxBudget,
+            @Argument List<String> preferredPropertyTypes,
+            @Argument List<String> preferredAmenities,
+            @Argument dev.dolu.userservice.models.BusinessType businessType,
+            @Argument dev.dolu.userservice.models.VisitDuration visitDuration
     ) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (firstName != null) user.setFirstName(firstName);
-        if (lastName != null) user.setLastName(lastName);
-        if (username != null) user.setUsername(username);
-        if (phoneNumber != null) user.setPhoneNumber(phoneNumber);
-        if (email != null) user.setEmail(email);
-        if (password != null) user.setPassword(passwordEncoder.encode(password));
-        if (dateOfBirth != null) user.setDateOfBirth(LocalDate.parse(dateOfBirth));
-        if (profession != null) user.setProfession(profession);
-        if (city != null) user.setCity(city);
-        if (country != null) user.setCountry(country);
-        if (role != null) user.setRole(role);
-        if (profileCompleted != null) user.setProfileCompleted(profileCompleted);
-        if (onboardingCompleted != null) user.setOnboardingCompleted(onboardingCompleted);
-        if (subscriptionPlan != null) user.setSubscriptionPlan(subscriptionPlan);
-        if (subscriptionActive != null) user.setSubscriptionActive(subscriptionActive);
-        if (intention != null) user.setIntention(intention);
-        if (profileDescription != null) user.setProfileDescription(profileDescription);
-        if (profilePicture != null) user.setProfilePicture(profilePicture);
-        if (favourites != null) user.setFavourites(favourites);
-        if (openVisitations != null) user.setOpenVisitations(openVisitations);
-        if (paymentVerified != null) user.setPaymentVerified(paymentVerified);
-        if (totalEarnings != null) user.setTotalEarnings(totalEarnings);
-        if (completedFeatures != null) user.setCompletedFeatures(completedFeatures);
-        // PayoutInfo
-        boolean hasPayout = payoutAccountNumber != null || payoutBankCode != null || payoutBankName != null || payoutAccountHolderName != null || payoutRecipientCode != null || payoutBvn != null || payoutEmailForPayouts != null || payoutVerified != null || payoutCurrency != null || payoutLastUpdated != null;
-        if (hasPayout) {
-            PayoutInfo payoutInfo = user.getPayoutInfo() != null ? user.getPayoutInfo() : new PayoutInfo();
-            if (payoutAccountNumber != null) payoutInfo.setAccountNumber(payoutAccountNumber);
-            if (payoutBankCode != null) payoutInfo.setBankCode(payoutBankCode);
-            if (payoutBankName != null) payoutInfo.setBankName(payoutBankName);
-            if (payoutAccountHolderName != null) payoutInfo.setAccountHolderName(payoutAccountHolderName);
-            if (payoutRecipientCode != null) payoutInfo.setRecipientCode(payoutRecipientCode);
-            if (payoutBvn != null) payoutInfo.setBvn(payoutBvn);
-            if (payoutEmailForPayouts != null) payoutInfo.setEmailForPayouts(payoutEmailForPayouts);
-            if (payoutVerified != null) payoutInfo.setVerified(payoutVerified);
-            if (payoutCurrency != null) payoutInfo.setCurrency(payoutCurrency);
-            if (payoutLastUpdated != null) payoutInfo.setLastUpdated(LocalDateTime.parse(payoutLastUpdated));
-            user.setPayoutInfo(payoutInfo);
+        try {
+            // 1. Find user with proper error handling
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException("User not found with ID: " + id));
+
+            // 2. Validate email uniqueness if email is being updated
+            if (email != null && !email.equals(user.getEmail())) {
+                User existingUserWithEmail = userRepository.findByEmail(email);
+                if (existingUserWithEmail != null && !existingUserWithEmail.getId().equals(id)) {
+                    throw new BadRequestException("Email address is already in use by another user");
+                }
+            }
+
+            // 3. Validate phone number uniqueness if phone is being updated
+            if (phoneNumber != null && !phoneNumber.equals(user.getPhoneNumber())) {
+                User existingUserWithPhone = userRepository.findByPhoneNumber(phoneNumber);
+                if (existingUserWithPhone != null && !existingUserWithPhone.getId().equals(id)) {
+                    throw new BadRequestException("Phone number is already in use by another user");
+                }
+            }
+
+            // 4. Validate date of birth format and age
+            if (dateOfBirth != null) {
+                try {
+                    LocalDate dob = LocalDate.parse(dateOfBirth);
+                    int age = java.time.Period.between(dob, LocalDate.now()).getYears();
+                    if (age < 16) {
+                        throw new BadRequestException("User must be at least 16 years old");
+                    }
+                    user.setDateOfBirth(dob);
+                } catch (java.time.format.DateTimeParseException e) {
+                    throw new BadRequestException("Invalid date format for date of birth. Use YYYY-MM-DD format");
+                }
+            }
+
+            // 5. Validate email format
+            if (email != null && !isValidEmail(email)) {
+                throw new BadRequestException("Invalid email format");
+            }
+
+            // 6. Update user fields with validation
+            if (firstName != null) {
+                if (firstName.trim().isEmpty()) {
+                    throw new BadRequestException("First name cannot be empty");
+                }
+                user.setFirstName(firstName.trim());
+            }
+            if (lastName != null) {
+                if (lastName.trim().isEmpty()) {
+                    throw new BadRequestException("Last name cannot be empty");
+                }
+                user.setLastName(lastName.trim());
+            }
+            if (username != null) user.setUsername(username.trim());
+            if (phoneNumber != null) user.setPhoneNumber(phoneNumber.trim());
+            if (email != null) user.setEmail(email.toLowerCase().trim());
+            if (password != null) user.setPassword(passwordEncoder.encode(password));
+            if (profession != null) user.setProfession(profession.trim());
+            if (city != null) user.setCity(city.trim());
+            if (country != null) user.setCountry(country.trim());
+            if (role != null) user.setRole(role);
+            if (profileCompleted != null) user.setProfileCompleted(profileCompleted);
+            if (onboardingCompleted != null) user.setOnboardingCompleted(onboardingCompleted);
+            if (subscriptionPlan != null) user.setSubscriptionPlan(subscriptionPlan.trim());
+            if (subscriptionActive != null) user.setSubscriptionActive(subscriptionActive);
+            if (intention != null) user.setIntention(intention);
+            if (profileDescription != null) user.setProfileDescription(profileDescription.trim());
+            if (profilePicture != null) user.setProfilePicture(profilePicture.trim());
+            if (favourites != null) user.setFavourites(favourites);
+            if (openVisitations != null) user.setOpenVisitations(openVisitations);
+            if (paymentVerified != null) user.setPaymentVerified(paymentVerified);
+            if (totalEarnings != null) user.setTotalEarnings(totalEarnings);
+            if (completedFeatures != null) user.setCompletedFeatures(completedFeatures);
+            if (emailNotificationsEnabled != null) user.setEmailNotificationsEnabled(emailNotificationsEnabled);
+            if (smsNotificationsEnabled != null) user.setSmsNotificationsEnabled(smsNotificationsEnabled);
+            if (pushNotificationsEnabled != null) user.setPushNotificationsEnabled(pushNotificationsEnabled);
+            if (bufferTimeHours != null) user.setBufferTimeHours(bufferTimeHours);
+            if (fcmDeviceToken != null) user.setFcmDeviceToken(fcmDeviceToken.trim());
+            if (searchRadius != null) user.setSearchRadius(searchRadius);
+            if (priceAlerts != null) user.setPriceAlerts(priceAlerts);
+            if (newListingAlerts != null) user.setNewListingAlerts(newListingAlerts);
+            if (visitReminders != null) user.setVisitReminders(visitReminders);
+            if (autoSaveSearches != null) user.setAutoSaveSearches(autoSaveSearches);
+            if (maxBudget != null) user.setMaxBudget(maxBudget);
+            if (preferredPropertyTypes != null) user.setPreferredPropertyTypes(preferredPropertyTypes);
+            if (preferredAmenities != null) user.setPreferredAmenities(preferredAmenities);
+            if (businessType != null) user.setBusinessType(businessType);
+            if (visitDuration != null) user.setVisitDuration(visitDuration);
+
+            // 7. Save with database constraint error handling
+            try {
+                return userRepository.save(user);
+            } catch (DataIntegrityViolationException e) {
+                String message = e.getMessage().toLowerCase();
+                if (message.contains("email")) {
+                    throw new BadRequestException("Email address is already in use");
+                } else if (message.contains("phone")) {
+                    throw new BadRequestException("Phone number is already in use");
+                } else {
+                    throw new BadRequestException("A database constraint was violated. Please check your data");
+                }
+            }
+        } catch (NotFoundException | BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error updating user: ", e);
+            throw new BadRequestException("An unexpected error occurred while updating the user profile");
         }
-        return userRepository.save(user);
     }
 
-    @MutationMapping
-    public boolean deleteUser(@Argument UUID id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
-        }
-        userRepository.deleteById(id);
-        return true;
-    }
-
-    @MutationMapping
-    public User markProfileComplete(@Argument UUID id) {
-        return userService.markProfileComplete(id);
-    }
-
-    @MutationMapping
-    public User markOnboardingComplete(@Argument UUID id) {
-        return userService.markOnboardingComplete(id);
-    }
-
-    @MutationMapping
-    public User updateSubscription(@Argument UUID id, @Argument String plan, @Argument Boolean active) {
-        return userService.updateSubscription(id, plan, active);
+    private boolean isValidEmail(String email) {
+        return email != null &&
+                email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$") &&
+                email.length() <= 255;
     }
 }

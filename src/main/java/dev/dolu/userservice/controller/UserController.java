@@ -324,6 +324,79 @@ public class UserController {
         ));
     }
 
+    @PostMapping("/magic-signin")
+    public ResponseEntity<?> magicSignIn(@RequestBody Map<String, String> request) {
+        try {
+            String magicToken = request.get("token");
+            logger.info("Magic sign-in attempt with token");
+
+            // Validate the magic token
+            if (magicToken == null || !jwtUtils.validateJwtToken(magicToken)) {
+                logger.warn("Invalid or expired magic token");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid or expired magic link"));
+            }
+
+            // Check if token is blacklisted
+            if (jwtUtils.isTokenBlacklisted(magicToken)) {
+                logger.warn("Attempt to use blacklisted magic token");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Magic link has already been used"));
+            }
+
+            // Extract user details from the magic token
+            Map<String, Object> userDetails = jwtUtils.getUserDetailsFromJwtToken(magicToken);
+            if (userDetails == null) {
+                logger.warn("Magic token missing user details");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Invalid magic link format"));
+            }
+
+            String userId = (String) userDetails.get("id");
+            String email = (String) userDetails.get("email");
+            String role = (String) userDetails.get("role");
+
+            // Verify user exists in database
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                logger.warn("User not found for magic sign-in: {}", email);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+
+            // Generate new access and refresh tokens for the authenticated session
+            String accessToken = jwtUtils.generateJwtToken(user.getId(), user.getEmail(), user.getRole().toString());
+            String refreshToken = jwtUtils.generateRefreshToken(user.getEmail());
+            jwtUtils.storeRefreshToken(refreshToken, user.getEmail());
+
+            // Optionally blacklist the magic token to prevent reuse
+            long expiration = jwtUtils.getExpirationFromToken(magicToken);
+            if (expiration > 0) {
+                jwtUtils.blacklistToken(magicToken, expiration, TimeUnit.MILLISECONDS);
+            }
+
+            logger.info("Magic sign-in successful for user: {}", email);
+
+            // Return the new tokens and user info
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Magic sign-in successful");
+            response.put("accessToken", accessToken);
+            response.put("refreshToken", refreshToken);
+            response.put("user", Map.of(
+                    "id", user.getId(),
+                    "email", user.getEmail(),
+                    "role", user.getRole().toString()
+            ));
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error during magic sign-in", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An unexpected error occurred"));
+        }
+    }
+
     @PatchMapping("/{id}/increase-earnings")
     public ResponseEntity<User> increaseUserTotalEarnings(@PathVariable UUID id, @RequestParam Double amount) {
         User updatedUser = userService.increaseUserTotalEarnings(id, amount);

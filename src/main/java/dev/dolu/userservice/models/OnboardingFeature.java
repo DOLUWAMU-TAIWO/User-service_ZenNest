@@ -29,7 +29,10 @@ public enum OnboardingFeature {
 
     // ===== VISIT BOOKING FEATURES (Desktop & Mobile) =====
     VISIT_BOOKING_INTRO,             // Seen visit booking introduction
-    MOBILE_VISIT_BOOKING_INTRO,      // Mobile-specific visit booking intro
+    VISIT_BOOKING_TOUR_COMPLETED,    // User has completed the booking system tour
+    VISIT_TOUR_COMPLETED,            // User has completed the visit management tour
+    REVENUE_TOUR_COMPLETED,          // User has completed the revenue/earnings tour
+    DIGITAL_CONTRACT_TOUR_COMPLETED, // User has completed the digital contract tour
     CREATE_FIRST_VISIT_SLOT,         // Created first availability slot
     VIEW_VISIT_CALENDAR,             // Navigated the calendar view
     MANAGE_MULTIPLE_SLOTS,           // Created multiple slots in one session

@@ -86,6 +86,7 @@ public class SecurityConfig {
                                 "/api/users/verify-email", "/api/users/forgot-password",
                                 "/api/users/reset-password", "/api/users/resend-verification",
                                 "/api/users/refresh-token", "/api/test-email",
+                                "/api/users/magic-signin",
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
                         .requestMatchers("/api/users/*/payout-info").permitAll()

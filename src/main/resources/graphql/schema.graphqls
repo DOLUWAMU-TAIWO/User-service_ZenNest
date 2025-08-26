@@ -32,6 +32,21 @@ enum OnboardingFeature {
     FEEDBACK_SURVEY
 }
 
+enum BusinessType {
+    SHORTLET
+    LONGTERM
+    BOTH
+}
+
+enum VisitDuration {
+    FIFTEEN_MINUTES
+    THIRTY_MINUTES
+    FORTY_FIVE_MINUTES
+    ONE_HOUR
+    NINETY_MINUTES
+    TWO_HOURS
+}
+
 type PayoutInfo {
     accountNumber: String
     bankCode: String
@@ -79,19 +94,18 @@ type User {
     openVisitations: Boolean!
     paymentVerified: Boolean!
     completedFeatures: [OnboardingFeature!]!
+    version: Int!
 
-    # ADD THESE NOTIFICATION SETTINGS
-    emailNotificationsEnabled: Boolean
-    smsNotificationsEnabled: Boolean
-    pushNotificationsEnabled: Boolean
+    # Notification settings
+    emailNotificationsEnabled: Boolean!
+    smsNotificationsEnabled: Boolean!
+    pushNotificationsEnabled: Boolean!
 
-    # ADD THESE LANDLORD SETTINGS
-    visitDuration: String
-    autoAcceptBooking: Boolean
-    autoAcceptVisitation: Boolean
-    bufferTimeHours: Int
+    # FCM and buffer settings
+    fcmDeviceToken: String
+    bufferTimeHours: Int!
 
-    # ADD THESE TENANT SETTINGS
+    # Tenant preferences
     searchRadius: Int
     priceAlerts: Boolean
     newListingAlerts: Boolean
@@ -100,6 +114,12 @@ type User {
     maxBudget: Float
     preferredPropertyTypes: [String]
     preferredAmenities: [String]
+
+    # Business settings
+    businessType: BusinessType
+    visitDuration: VisitDuration!
+    autoAcceptBooking: Boolean!
+    autoAcceptVisitation: Boolean!
 }
 
 type Query {
@@ -133,6 +153,14 @@ type Mutation {
         profileDescription: String
         profilePicture: String
         favourites: [ID]
+        profileCompleted: Boolean
+        onboardingCompleted: Boolean
+        subscriptionPlan: String
+        subscriptionActive: Boolean
+        openVisitations: Boolean
+        paymentVerified: Boolean
+        totalEarnings: Float
+        completedFeatures: [OnboardingFeature]
     ): User
 
     updateUser(
@@ -157,6 +185,26 @@ type Mutation {
         profileDescription: String
         profilePicture: String
         favourites: [ID]
+        openVisitations: Boolean
+        paymentVerified: Boolean
+        totalEarnings: Float
+        completedFeatures: [OnboardingFeature]
+        # NEW FIELDS
+        emailNotificationsEnabled: Boolean
+        smsNotificationsEnabled: Boolean
+        pushNotificationsEnabled: Boolean
+        bufferTimeHours: Int
+        fcmDeviceToken: String
+        searchRadius: Int
+        priceAlerts: Boolean
+        newListingAlerts: Boolean
+        visitReminders: Boolean
+        autoSaveSearches: Boolean
+        maxBudget: Float
+        preferredPropertyTypes: [String]
+        preferredAmenities: [String]
+        businessType: BusinessType
+        visitDuration: VisitDuration
     ): User
 
     deleteUser(id: ID!): Boolean
