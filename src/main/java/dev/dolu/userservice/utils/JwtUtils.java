@@ -78,6 +78,44 @@ public class JwtUtils {
                 .compact();
     }
 
+    // Generate magic link token (shorter expiration for security)
+    public String generateMagicLinkToken(UUID userId, String email, String role) {
+        try {
+            Map<String, Object> claims = new HashMap<>();
+            Map<String, Object> userClaim = new HashMap<>();
+            userClaim.put("id", userId.toString());
+            userClaim.put("email", email);
+            userClaim.put("role", role);
+            userClaim.put("type", "MAGIC_LINK"); // Mark as magic link token
+            claims.put("user", userClaim);
+
+            // Magic link tokens expire in 30 minutes for security
+            long magicLinkExpiration = 30 * 60 * 1000; // 30 minutes
+
+            return Jwts.builder()
+                    .claims(claims)
+                    .subject(email)
+                    .issuedAt(new Date())
+                    .expiration(new Date(System.currentTimeMillis() + magicLinkExpiration))
+                    .signWith(getSigningKey())
+                    .compact();
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Failed to generate magic link token: {0}", e.getMessage());
+            return null;
+        }
+    }
+
+    // Check if token is a magic link token
+    public boolean isMagicLinkToken(String token) {
+        try {
+            Map<String, Object> userDetails = getUserDetailsFromJwtToken(token);
+            return userDetails != null && "MAGIC_LINK".equals(userDetails.get("type"));
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Error checking magic link token: {0}", e.getMessage());
+            return false;
+        }
+    }
+
     public boolean validateJwtToken(String token) {
         try {
             Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);

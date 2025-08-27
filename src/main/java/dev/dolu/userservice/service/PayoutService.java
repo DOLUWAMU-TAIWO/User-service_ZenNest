@@ -7,4 +7,6 @@ import dev.dolu.userservice.models.PayoutInfoResponse;
 
 public interface PayoutService {
     PayoutInfoResponse resolveAndSavePayoutInfo(UUID userId, PayoutInfoRequest request) throws Exception;
+
+    PayoutInfoResponse getPayoutInfo(UUID userId);
 }

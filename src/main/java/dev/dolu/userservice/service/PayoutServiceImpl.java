@@ -82,4 +82,13 @@ public class PayoutServiceImpl implements PayoutService {
         userRepository.save(user);
         return new PayoutInfoResponse(true, accountName);
     }
+
+    @Override
+    public PayoutInfoResponse getPayoutInfo(UUID userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getPayoutInfo() == null || user.getPayoutInfo().getAccountNumber() == null) {
+            return new PayoutInfoResponse(false, null);
+        }
+        return new PayoutInfoResponse(true, user.getPayoutInfo().getAccountHolderName());
+    }
 }

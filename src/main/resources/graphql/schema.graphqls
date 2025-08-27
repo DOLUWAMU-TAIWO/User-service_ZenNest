@@ -213,4 +213,25 @@ type Mutation {
     markOnboardingComplete(id: ID!): User
     updateSubscription(id: ID!, plan: String!, active: Boolean!): User
     markOnboardingFeatureCompleted(userId: ID!, feature: OnboardingFeature!): [OnboardingFeature!]!
+
+    # Dedicated mutation for completing user profile with congratulations email
+    completeProfile(
+        id: ID!
+        firstName: String!
+        lastName: String!
+        email: String!
+        phoneNumber: String!
+        role: Role!
+        city: String!
+        intention: UserIntention!
+        profileDescription: String!
+        profilePicture: String
+        profession: String
+        dateOfBirth: String!
+        # Landlord-specific fields (optional)
+        openVisitations: Boolean
+        autoAcceptBooking: Boolean
+        visitDuration: VisitDuration
+        bufferTimeHours: Int
+    ): User
 }

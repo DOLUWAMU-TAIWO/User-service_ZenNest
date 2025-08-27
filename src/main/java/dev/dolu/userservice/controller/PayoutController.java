@@ -34,4 +34,14 @@ public class PayoutController {
             return ResponseEntity.badRequest().body(new PayoutInfoResponse(false, null));
         }
     }
+
+    @GetMapping
+    public ResponseEntity<PayoutInfoResponse> getPayoutInfo(@PathVariable UUID id, @RequestHeader("Authorization") String authHeader) {
+        // JWT validation is handled by security filter
+        PayoutInfoResponse response = payoutService.getPayoutInfo(id);
+        if (!response.isSuccess()) {
+            return ResponseEntity.status(404).body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
 }

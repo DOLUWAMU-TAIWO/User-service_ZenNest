@@ -10,6 +10,7 @@ import dev.dolu.userservice.models.User;
 import dev.dolu.userservice.models.UserIntention;
 import dev.dolu.userservice.repository.UserRepository;
 import dev.dolu.userservice.service.UserService;
+import dev.dolu.userservice.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static graphql.ErrorType.DataFetchingException;
 
@@ -38,11 +40,13 @@ public class GraphqlController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final UserService userService;
+    private final EmailService emailService;
 
     @Autowired
-    public GraphqlController(UserRepository userRepository, UserService userService) {
+    public GraphqlController(UserRepository userRepository, UserService userService, EmailService emailService) {
         this.userRepository = userRepository;
         this.userService = userService;
+        this.emailService = emailService;
     }
 
 
@@ -307,9 +311,167 @@ public class GraphqlController {
         }
     }
 
+    @MutationMapping
+    public User completeProfile(
+            @Argument UUID id, @Argument String firstName, @Argument String lastName,
+            @Argument String email, @Argument String phoneNumber, @Argument Role role,
+            @Argument String city, @Argument UserIntention intention,
+            @Argument String profileDescription, @Argument String profilePicture,
+            @Argument String profession, @Argument String dateOfBirth,
+            // Landlord-specific fields (optional)
+            @Argument Boolean openVisitations, @Argument Boolean autoAcceptBooking,
+            @Argument dev.dolu.userservice.models.VisitDuration visitDuration,
+            @Argument Integer bufferTimeHours
+    ) {
+        try {
+            // 1. Find user with proper error handling
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException("User not found with ID: " + id));
+
+            // 2. Validate email uniqueness if email is being updated
+            if (!email.equals(user.getEmail())) {
+                User existingUserWithEmail = userRepository.findByEmail(email);
+                if (existingUserWithEmail != null && !existingUserWithEmail.getId().equals(id)) {
+                    throw new BadRequestException("Email address is already in use by another user");
+                }
+            }
+
+            // 3. Validate phone number uniqueness if phone is being updated
+            if (!phoneNumber.equals(user.getPhoneNumber())) {
+                User existingUserWithPhone = userRepository.findByPhoneNumber(phoneNumber);
+                if (existingUserWithPhone != null && !existingUserWithPhone.getId().equals(id)) {
+                    throw new BadRequestException("Phone number is already in use by another user");
+                }
+            }
+
+            // 4. Validate date of birth format and age
+            LocalDate dob = null;
+            if (dateOfBirth != null) {
+                try {
+                    dob = LocalDate.parse(dateOfBirth);
+                    int age = java.time.Period.between(dob, LocalDate.now()).getYears();
+                    if (age < 16) {
+                        throw new BadRequestException("User must be at least 16 years old");
+                    }
+                } catch (java.time.format.DateTimeParseException e) {
+                    throw new BadRequestException("Invalid date format for date of birth. Use YYYY-MM-DD format");
+                }
+            }
+
+            // 5. Validate email format
+            if (!isValidEmail(email)) {
+                throw new BadRequestException("Invalid email format");
+            }
+
+            // 6. Validate required fields for profile completion
+            if (firstName == null || firstName.trim().isEmpty()) {
+                throw new BadRequestException("First name is required for profile completion");
+            }
+            if (lastName == null || lastName.trim().isEmpty()) {
+                throw new BadRequestException("Last name is required for profile completion");
+            }
+            if (city == null || city.trim().isEmpty()) {
+                throw new BadRequestException("City is required for profile completion");
+            }
+            if (profileDescription == null || profileDescription.trim().length() < 10) {
+                throw new BadRequestException("Profile description must be at least 10 characters for profile completion");
+            }
+
+            // 7. Update user fields
+            user.setFirstName(firstName.trim());
+            user.setLastName(lastName.trim());
+            user.setEmail(email.toLowerCase().trim());
+            user.setPhoneNumber(phoneNumber.trim());
+            user.setRole(role);
+            user.setCity(city.trim());
+            user.setIntention(intention);
+            user.setProfileDescription(profileDescription.trim());
+            if (profilePicture != null) user.setProfilePicture(profilePicture.trim());
+            if (profession != null) user.setProfession(profession.trim());
+            if (dob != null) user.setDateOfBirth(dob);
+
+            // 8. Set landlord-specific fields if applicable
+            if (role == Role.LANDLORD) {
+                if (openVisitations != null) user.setOpenVisitations(openVisitations);
+                if (autoAcceptBooking != null) user.setAutoAcceptBooking(autoAcceptBooking);
+                if (visitDuration != null) user.setVisitDuration(visitDuration);
+                if (bufferTimeHours != null) user.setBufferTimeHours(bufferTimeHours);
+            }
+
+            // 9. Mark profile as completed
+            user.setProfileCompleted(true);
+
+            // 10. Save user with database constraint error handling
+            User savedUser;
+            try {
+                savedUser = userRepository.save(user);
+            } catch (DataIntegrityViolationException e) {
+                String message = e.getMessage().toLowerCase();
+                if (message.contains("email")) {
+                    throw new BadRequestException("Email address is already in use");
+                } else if (message.contains("phone")) {
+                    throw new BadRequestException("Phone number is already in use");
+                } else {
+                    throw new BadRequestException("A database constraint was violated. Please check your data");
+                }
+            }
+
+            // 11. Send congratulations email based on role (async to avoid blocking)
+            try {
+                // Send role-specific congratulations email with magic links asynchronously
+                if (role == Role.TENANT) {
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            boolean emailSent = emailService.sendTenantProfileCompletionEmailWithMagicLink(
+                                savedUser.getEmail(),
+                                savedUser.getFirstName(),
+                                savedUser.getId()
+                            );
+                            if (emailSent) {
+                                logger.info("Enhanced profile completion email with magic link sent successfully to tenant: {}", savedUser.getEmail());
+                            } else {
+                                logger.warn("Failed to send enhanced profile completion email to tenant: {}", savedUser.getEmail());
+                            }
+                        } catch (Exception e) {
+                            logger.error("Error sending enhanced profile completion email to tenant {}: {}", savedUser.getEmail(), e.getMessage());
+                        }
+                    });
+                } else if (role == Role.LANDLORD) {
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            boolean emailSent = emailService.sendLandlordProfileCompletionEmailWithMagicLink(
+                                savedUser.getEmail(),
+                                savedUser.getFirstName(),
+                                savedUser.getId()
+                            );
+                            if (emailSent) {
+                                logger.info("Enhanced profile completion email with magic link sent successfully to landlord: {}", savedUser.getEmail());
+                            } else {
+                                logger.warn("Failed to send enhanced profile completion email to landlord: {}", savedUser.getEmail());
+                            }
+                        } catch (Exception e) {
+                            logger.error("Error sending enhanced profile completion email to landlord {}: {}", savedUser.getEmail(), e.getMessage());
+                        }
+                    });
+                }
+            } catch (Exception emailException) {
+                // Log the error but don't fail the profile completion
+                logger.error("Error setting up congratulations email for user {}: {}", savedUser.getId(), emailException.getMessage());
+            }
+
+            logger.info("Profile completed successfully for user: {} with role: {}", savedUser.getId(), role);
+            return savedUser;
+
+        } catch (NotFoundException | BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error completing profile for user {}: ", id, e);
+            throw new BadRequestException("An unexpected error occurred while completing the user profile");
+        }
+    }
+
     private boolean isValidEmail(String email) {
         return email != null &&
-                email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$") &&
-                email.length() <= 255;
+                email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
     }
 }

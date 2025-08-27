@@ -31,9 +31,18 @@ public class NewsletterController {
                                             @RequestParam("content") String content) {
         List<NewsletterSubscriber> subscribers = newsletterSubscriberRepository.findAll();
         List<String> emails = subscribers.stream().map(NewsletterSubscriber::getEmail).toList();
-        boolean success = emailService.sendBulkEmail(emails, subject, content);
-        if (success) {
-            return ResponseEntity.ok("Newsletter sent to " + emails.size() + " subscribers.");
+
+        // Send individual emails instead of bulk email for privacy
+        int successCount = 0;
+        for (String email : emails) {
+            boolean sent = emailService.sendEmail(email, subject, content);
+            if (sent) {
+                successCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            return ResponseEntity.ok("Newsletter sent to " + successCount + " of " + emails.size() + " subscribers.");
         } else {
             return ResponseEntity.status(500).body("Failed to send newsletter to subscribers.");
         }
